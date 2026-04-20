@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default permissions for SGICE",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "sql:default",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "sql:allow-select", 
+    "dialog:allow-save",
+    "dialog:allow-open",
+     "fs:allow-write-file",
+    "fs:allow-read-file",
+    "dialog:default",
+
+    "fs:allow-desktop-write",
+    "fs:allow-document-write",
+    "fs:allow-download-write"
+  ]
+}
