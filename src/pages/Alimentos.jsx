@@ -316,7 +316,7 @@ async function exportarInventarioExcel() {
 
   XLSX.utils.sheet_add_aoa(ws, [
     ["REPORTE DE INVENTARIO"],
-    ["CENTRO DIURNO CORAGE Y ESPERANZA"],
+    ["CENTRO DIURNO CORAJE Y ESPERANZA"],
     [`Generado: ${new Date().toLocaleString()}`],
     [`Total productos: ${totalProductos}`],
     [`Total unidades: ${totalUnidades}`],
@@ -357,7 +357,7 @@ async function exportarInventarioPDF() {
   doc.text("REPORTE DE INVENTARIO", 14, 15);
 
   doc.setFontSize(12);
-  doc.text("CENTRO DIURNO CORAGE Y ESPERANZA", 14, 22);
+  doc.text("CENTRO DIURNO CORAJE Y ESPERANZA", 14, 22);
 
   doc.setFontSize(10);
   doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 30);
@@ -399,7 +399,7 @@ async function exportarHistorialExcel() {
 
   XLSX.utils.sheet_add_aoa(ws, [
     ["REPORTE DE MOVIMIENTOS"],
-    ["CENTRO DIURNO CORAGE Y ESPERANZA"],
+    ["CENTRO DIURNO CORAJE Y ESPERANZA"],
     [`Generado: ${new Date().toLocaleString()}`],
     []
   ], { origin: "A1" });
@@ -440,7 +440,7 @@ async function exportarHistorialPDF() {
   doc.text("REPORTE DE MOVIMIENTOS", 14, 15);
 
   doc.setFontSize(12);
-  doc.text("CENTRO DIURNO CORAGE Y ESPERANZA", 14, 22);
+  doc.text("CENTRO DIURNO CORAJE Y ESPERANZA", 14, 22);
 
   doc.setFontSize(10);
   doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 30);
