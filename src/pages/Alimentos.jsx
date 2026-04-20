@@ -8,6 +8,9 @@ import {
   eliminarProducto
 } from "../services/db";
 
+
+import Select from "react-select";
+
 import { obtenerMovimientos } from "../services/db";
 
 import { confirm } from "@tauri-apps/plugin-dialog";
@@ -50,6 +53,19 @@ const [fechaFin, setFechaFin] = useState("");
 
 const esAdmin = role === "admin";
 const esCocina = role === "cocina";
+const [busquedaEntrada, setBusquedaEntrada] = useState("");
+const [busquedaSalida, setBusquedaSalida] = useState("");
+
+
+
+
+const productosEntrada = productos.filter(p =>
+  p.nombre.toLowerCase().includes(busquedaEntrada.toLowerCase())
+);
+
+const productosSalida = productos.filter(p =>
+  p.nombre.toLowerCase().includes(busquedaSalida.toLowerCase())
+);
 
 
 
@@ -645,27 +661,22 @@ async function exportarHistorialPDF() {
         <div className="form-box">
           <h3>Registrar Entrada</h3>
 
-          <select
-            value={entradaId}
-            onChange={(e) =>
-              setEntradaId(e.target.value)
-            }
-          >
-            <option value="">
-              Seleccione producto
-            </option>
+         <Select
+          placeholder="Seleccione producto..."
+          value={
+            productos
+              .map(p => ({ value: p.id, label: p.nombre }))
+              .find(opt => opt.value === Number(entradaId)) || null
+          }
+          onChange={(selected) => setEntradaId(selected?.value || "")}
+          options={productos.map((p) => ({
+            value: p.id,
+            label: p.nombre
+          }))}
+          isSearchable
+        />
 
-            {productos.map((p) => (
-              <option
-                key={p.id}
-                value={p.id}
-              >
-                {p.nombre}
-              </option>
-            ))}
-          </select>
-
-          <input
+                  <input
             type="number"
             min="1"
             placeholder="Cantidad"
@@ -697,27 +708,22 @@ async function exportarHistorialPDF() {
         <div className="form-box">
           <h3>Registrar Salida</h3>
 
-          <select
-            value={salidaId}
-            onChange={(e) =>
-              setSalidaId(e.target.value)
-            }
-          >
-            <option value="">
-              Seleccione producto
-            </option>
+            <Select
+              placeholder="Seleccione producto..."
+              value={
+                productos
+                  .map(p => ({ value: p.id, label: p.nombre }))
+                  .find(opt => opt.value === Number(salidaId)) || null
+              }
+              onChange={(selected) => setSalidaId(selected?.value || "")}
+              options={productos.map((p) => ({
+                value: p.id,
+                label: p.nombre
+              }))}
+              isSearchable
+            />
 
-            {productos.map((p) => (
-              <option
-                key={p.id}
-                value={p.id}
-              >
-                {p.nombre}
-              </option>
-            ))}
-          </select>
-
-          <input
+                      <input
             type="number"
             min="1"
             placeholder="Cantidad"
@@ -758,13 +764,21 @@ async function exportarHistorialPDF() {
         onChange={(e) => setFechaFin(e.target.value)}
       />
 
-      <button onClick={exportarHistorialExcel}>
-        Excel
+      <div className="export-buttons">
+      <button
+        className="btn-export excel"
+        onClick={exportarHistorialExcel}
+      >
+        📊 Excel
       </button>
 
-      <button onClick={exportarHistorialPDF}>
-        PDF
+      <button
+        className="btn-export pdf"
+        onClick={exportarHistorialPDF}
+      >
+        📄 PDF
       </button>
+    </div>
     </div>
 
     <div className="table-card">

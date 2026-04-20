@@ -481,3 +481,31 @@ button{
 .btn-export.pdf:hover {
   background: #922b21;
 }
+
+.export-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-export {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-export.excel {
+  background: #1d6f42;
+  color: white;
+}
+
+.btn-export.pdf {
+  background: #c0392b;
+  color: white;
+}
+
+.btn-export:hover {
+  opacity: 0.85;
+}
