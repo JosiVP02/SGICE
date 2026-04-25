@@ -509,3 +509,176 @@ button{
 .btn-export:hover {
   opacity: 0.85;
 }
+/* 🔥 CONTENEDOR GENERAL */
+.filtros-card {
+  background: #ffffff;
+  padding: 15px 18px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  margin-bottom: 15px;
+}
+
+/* 🔥 FILTROS */
+.filtros-fecha {
+  display: flex;
+  align-items: end;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+/* 🔥 GRUPOS */
+.grupo-fecha {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: 600;
+  color: #444;
+}
+
+/* 🔥 INPUTS MODERNOS */
+.grupo-fecha input {
+  margin-top: 4px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  background: #f9fafb;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.grupo-fecha input:hover {
+  border-color: #bbb;
+}
+
+.grupo-fecha input:focus {
+  border-color: #2e7d32;
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(46,125,50,0.15);
+}
+
+/* 🔥 BOTÓN LIMPIAR */
+.btn-clear {
+  background: #f1f3f5;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.btn-clear:hover {
+  background: #e0e0e0;
+}
+
+/* 🔥 BOTONES EXPORTAR */
+.export-buttons {
+  display: flex;
+  gap: 10px;
+  margin-left: auto; /* 🔥 esto los manda a la derecha */
+}
+
+.btn-export {
+  border: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+/* Excel */
+.btn-export.excel {
+  background: #2e7d32;
+}
+
+.btn-export.excel:hover {
+  background: #256628;
+}
+
+/* PDF */
+.btn-export.pdf {
+  background: #c62828;
+}
+
+.btn-export.pdf:hover {
+  background: #a61f1f;
+}
+
+.filtro-fecha-box {
+  display: flex;
+  align-items: end;
+  gap: 20px;
+  background: linear-gradient(135deg, #f4f7fb, #e9eef5);
+  padding: 15px 20px;
+  border-radius: 14px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.filtro-group {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  color: #2b3a55;
+  font-weight: 600;
+}
+
+.filtro-group input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+/* 🔥 EFECTO HOVER Y FOCUS */
+.filtro-group input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+  outline: none;
+}
+
+/* BOTÓN LIMPIAR */
+.btn-limpiar {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #64748b;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-limpiar:hover {
+  background: #475569;
+}
+
+/* BOTONES EXPORTAR MÁS PRO */
+.btn-export.excel {
+  background: #16a34a;
+}
+
+.btn-export.excel:hover {
+  background: #15803d;
+}
+
+.btn-export.pdf {
+  background: #dc2626;
+}
+
+.btn-export.pdf:hover {
+  background: #b91c1c;
+}
+
+.tabla thead {
+  background: #24364f;
+  color: white;
+}
+
+.tabla tbody tr:hover {
+  background: #f1f5f9;
+}

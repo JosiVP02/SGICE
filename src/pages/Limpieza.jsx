@@ -26,7 +26,7 @@ import { writeFile } from "@tauri-apps/plugin-fs";
 
 import { ajusteStock, registrarConteo } from "../services/db";
 
-function Alimentos({ role }) {
+function Limpieza({ role }) {
   const [tab, setTab] = useState("inventario");
   const [productos, setProductos] = useState([]);
   const [historial, setHistorial] = useState([]);
@@ -141,7 +141,7 @@ const procesarConteo = async () => {
     // 🔥 SOLO SI HAY DIFERENCIA
     if (diferencia !== 0) {
       await ajusteStock(
-        "alimentos",
+        "limpieza",
         item.id,
         item.conteo,
         "Reajuste",
@@ -159,7 +159,7 @@ const procesarConteo = async () => {
 
   // 🔥 ESTO SIEMPRE SE GUARDA (aunque no haya cambios)
   await registrarConteo(
-    "alimentos",
+    "limpieza",
     descripcionConteo,
     usuarioActual
   );
@@ -254,7 +254,7 @@ const cancelarEdicion = () => {
   };
 
   const cargar = async () => {
-    const data = await obtenerProductos("alimentos");
+    const data = await obtenerProductos("limpieza");
     setProductos(data);
   };
 
@@ -264,7 +264,7 @@ const cancelarEdicion = () => {
 
 const cargarHistorial = async () => {
   try {
-    const data = await obtenerMovimientos("alimentos");
+    const data = await obtenerMovimientos("limpieza");
     setHistorial(data);
   } catch (e) {
     console.error(e);
@@ -313,7 +313,7 @@ const cargarHistorial = async () => {
     }
 
     await agregarProducto(
-      "alimentos",
+      "limpieza",
       nombre,
       Number(nuevoCantidad || 0)
     );
@@ -339,7 +339,7 @@ const cargarHistorial = async () => {
     const usuarioActual = esAdmin ? "admin" : "cocina";
 
     await entradaStock(
-      "alimentos",
+      "limpieza",
       Number(entradaId),
       Number(entradaCantidad),
       entradaDetalle || "Entrada manual",
@@ -381,7 +381,7 @@ const cargarHistorial = async () => {
     const usuarioActual = esAdmin ? "admin" : "cocina";
 
     await salidaStock(
-      "alimentos",
+      "limpieza",
       Number(salidaId),
       Number(salidaCantidad),
       salidaDetalle || "Salida manual",
@@ -427,7 +427,7 @@ const cargarHistorial = async () => {
   }
 
   await editarProducto(
-    "alimentos",
+    "limpieza",
     editando,
     nombre,
     Number(editCantidad)
@@ -444,7 +444,7 @@ const borrar = async (id) => {
 
   if (!ok) return;
 
-  await eliminarProducto("alimentos", id);
+  await eliminarProducto("limpieza", id);
 
   await cargar();
 
@@ -644,9 +644,9 @@ async function exportarHistorialPDF() {
     <div className="module-wrap">
       <div className="module-top">
         <div>
-          <h1>Alimentos</h1>
+          <h1>Limpieza</h1>
           <p className="subtext">
-            Gestión de inventario alimentario
+            Gestión de inventario limpieza
           </p>
         </div>
       </div>
@@ -674,23 +674,23 @@ async function exportarHistorialPDF() {
         </button>
         )}
 
-
+       
         <button onClick={() => setTab("entrada")}>
             Entradas
         </button>
-      
+        
 
         <button onClick={() => setTab("salida")}>
           Salidas
         </button>
-        
-        {esAdmin && (
+      
+      {esAdmin && (
         <button onClick={() => setTab("conteo")}>
           Conteo Físico
         </button>
         )}
 
-
+        
         <button onClick={() => setTab("historial")}>
           Historial
         </button>
@@ -1102,4 +1102,4 @@ async function exportarHistorialPDF() {
   );
 }
 
-export default Alimentos;
+export default Limpieza;

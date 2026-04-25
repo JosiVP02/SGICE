@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import "./styles/app.css";
 import Alimentos from "./pages/Alimentos";
 import { initDB } from "./services/db";
+import Limpieza from "./pages/Limpieza";
+import Activos from "./pages/Activos";
 
 function App() {
   const [logged, setLogged] = useState(false);
@@ -52,11 +54,9 @@ function App() {
 
     if (page === "alimentos") return <Alimentos role={role} />;
 
-    if (page === "limpieza")
-      return <h1>Módulo Limpieza</h1>;
+    if (page === "limpieza") return <Limpieza role={role} />;
 
-    if (page === "activos")
-      return <h1>Módulo Activos</h1>;
+    if (page === "activos") return <Activos role={role} />;
 
     if (page === "config")
       return <h1>Configuración</h1>;
