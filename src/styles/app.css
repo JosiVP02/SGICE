@@ -682,3 +682,15 @@ button{
 .tabla tbody tr:hover {
   background: #f1f5f9;
 }
+.badge.placa {
+  background: #2ecc71;
+  color: white;
+}
+
+.badge.sin {
+  background: #7f8c8d;
+  color: white;
+}  
+
+
+

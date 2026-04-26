@@ -5,6 +5,9 @@ import { initDB } from "./services/db";
 import Limpieza from "./pages/Limpieza";
 import Activos from "./pages/Activos";
 
+
+
+
 function App() {
   const [logged, setLogged] = useState(false);
   const [user, setUser] = useState("");
@@ -16,6 +19,7 @@ function App() {
     useEffect(() => {
     initDB();
   }, []);
+
 
   const login = () => {
     const usuario = user.trim();
@@ -151,13 +155,6 @@ function App() {
               Activos
             </button>
 
-            <button
-              onClick={() =>
-                setPage("config")
-              }
-            >
-              Configuración
-            </button>
           </>
         )}
 

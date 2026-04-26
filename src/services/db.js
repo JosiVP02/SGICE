@@ -59,23 +59,26 @@ export async function initDB() {
           CREATE TABLE IF NOT EXISTS activos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-        categoria TEXT NOT NULL, -- JPS, ACE, Ley7999, Ley5662
-
+        categoria TEXT NOT NULL,
         articulo TEXT NOT NULL,
+
         marca TEXT,
         modelo TEXT,
         serie TEXT,
+
         placa TEXT,
         tiene_placa INTEGER DEFAULT 0,
 
-        fecha TEXT,
+        fecha_adquisicion TEXT NOT NULL,
         factura TEXT,
+
         ubicacion TEXT,
         observaciones TEXT,
 
-        costo_original REAL,
-        vida_util_anios INTEGER,
+        costo_original REAL NOT NULL,
+        vida_util_anios INTEGER NOT NULL,
 
+        depreciacion_mensual REAL DEFAULT 0,
         depreciacion_acumulada REAL DEFAULT 0,
         valor_libros REAL DEFAULT 0,
 
@@ -83,8 +86,34 @@ export async function initDB() {
       )  
     `);
 
+        await db.execute(`
+          
+          CREATE TABLE IF NOT EXISTS bitacora_activos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+          activo_id INTEGER,
+
+          articulo TEXT,
+          categoria TEXT,
+          placa TEXT,
+          tiene_placa INTEGER,
+
+          ubicacion TEXT,
+          estado TEXT,
+
+          tipo TEXT, -- BAJA, TRASLADO, DAÑADO, etc.
+          detalle TEXT,
+          usuario TEXT,
+
+          fecha TEXT
+        );
+          
+          
+          `);
 
 
+
+    
 
 
 
@@ -307,17 +336,19 @@ export async function registrarConteo(tabla, descripcion, usuario) {
 
 
 
-
-
-
 export async function agregarActivo(data) {
-  await db.execute(
+  const res = await db.execute(
     `INSERT INTO activos (
       categoria, articulo, marca, modelo, serie,
-      placa, tiene_placa, fecha, factura, ubicacion,
-      observaciones, costo_original, vida_util_anios,
-      depreciacion_acumulada, valor_libros, estado
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      placa, tiene_placa,
+      fecha_adquisicion, factura,
+      ubicacion, observaciones,
+      costo_original, vida_util_anios,
+      depreciacion_mensual,
+      depreciacion_acumulada,
+      valor_libros,
+      estado
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.categoria,
       data.articulo,
@@ -326,45 +357,53 @@ export async function agregarActivo(data) {
       data.serie,
       data.placa,
       data.tiene_placa ? 1 : 0,
-      data.fecha,
+      data.fecha_adquisicion,
       data.factura,
       data.ubicacion,
       data.observaciones,
       data.costo_original,
       data.vida_util_anios,
+      data.depreciacion_mensual,
       data.depreciacion_acumulada,
       data.valor_libros,
       "ACTIVO"
     ]
   );
+
+  // 🔥 NUEVO: obtener el ID insertado
+  const id = res.lastInsertId;
+
+  return res;
 }
+
+
+
+
 
 
 export async function obtenerActivos() {
-  return await db.select(
-    `SELECT * FROM activos ORDER BY id DESC`
-  );
+  return await db.select(`SELECT * FROM activos ORDER BY id DESC`);
 }
-
 
 
 export async function editarActivo(data) {
   await db.execute(
     `UPDATE activos SET
-      categoria = ?,
-      articulo = ?,
-      marca = ?,
-      modelo = ?,
-      serie = ?,
-      placa = ?,
-      tiene_placa = ?,
-      fecha = ?,
-      factura = ?,
-      ubicacion = ?,
-      observaciones = ?,
-      costo_original = ?,
-      vida_util_anios = ?
-     WHERE id = ?`,
+    categoria = ?,
+    articulo = ?,
+    marca = ?,
+    modelo = ?,
+    serie = ?,
+    placa = ?,
+    tiene_placa = ?,
+    fecha_adquisicion = ?,
+    factura = ?,
+    ubicacion = ?,
+    observaciones = ?,
+    costo_original = ?,
+    vida_util_anios = ?,
+    estado = ?
+    WHERE id = ?`,
     [
       data.categoria,
       data.articulo,
@@ -373,16 +412,20 @@ export async function editarActivo(data) {
       data.serie,
       data.placa,
       data.tiene_placa ? 1 : 0,
-      data.fecha,
+      data.fecha_adquisicion,
       data.factura,
       data.ubicacion,
       data.observaciones,
       data.costo_original,
       data.vida_util_anios,
+      data.estado || "ACTIVO",
       data.id
     ]
   );
 }
+
+
+
 
 
 
@@ -397,17 +440,51 @@ export async function eliminarActivo(id, motivo = "BAJA") {
     [id]
   );
 
+}
+
+
+
+
+
+
+
+export async function registrarBitacoraActivo(data) {
+  const act = await db.select(
+    `SELECT * FROM activos WHERE id = ?`,
+    [data.activo_id]
+  );
+
+
+
+  if (!act.length) return;
+
+  const a = act[0];
+
   await db.execute(
-    `INSERT INTO movimientos
-    (modulo, producto, tipo, cantidad, detalle, usuario, fecha)
-    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO bitacora_activos (
+      activo_id,
+      articulo,
+      categoria,
+      placa,
+      tiene_placa,
+      ubicacion,
+      estado,
+      tipo,
+      detalle,
+      usuario,
+      fecha
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      "activos",
-      act[0].articulo,
-      "BAJA",
-      1,
-      motivo,
-      "sistema",
+      a.id,
+      a.articulo,
+      a.categoria,
+      a.placa || "",
+      a.tiene_placa ? 1 : 0,
+      a.ubicacion || "",
+      a.estado || "ACTIVO",
+      data.tipo,
+      data.detalle || "",
+      data.usuario || "sistema",
       new Intl.DateTimeFormat("sv-SE", {
         timeZone: "America/Costa_Rica",
         year: "numeric",
@@ -424,33 +501,10 @@ export async function eliminarActivo(id, motivo = "BAJA") {
 
 
 
-export async function registrarMovimientoActivo(data) {
-  const act = await db.select(
-    `SELECT articulo FROM activos WHERE id = ?`,
-    [data.activo_id]
-  );
 
-  await db.execute(
-    `INSERT INTO movimientos
-    (modulo, producto, tipo, cantidad, detalle, usuario, fecha)
-    VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [
-      "activos",
-      act[0].articulo,
-      data.tipo,
-      1,
-      data.detalle,
-      data.usuario,
-      new Intl.DateTimeFormat("sv-SE", {
-        timeZone: "America/Costa_Rica",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false
-      }).format(new Date()).replace(",", "")
-    ]
+export async function obtenerBitacoraActivos() {
+  return await db.select(
+    `SELECT * FROM bitacora_activos
+     ORDER BY id DESC`
   );
 }
