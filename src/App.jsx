@@ -4,185 +4,135 @@ import Alimentos from "./pages/Alimentos";
 import { initDB } from "./services/db";
 import Limpieza from "./pages/Limpieza";
 import Activos from "./pages/Activos";
+import Dashboard from "./pages/Dashboard";
+import logo from "./assets/logo.png";
 
 
+const NAV_ADMIN = [
+  { key: "dashboard", label: "Dashboard",  icon: "⊞" },
+  { key: "alimentos", label: "Alimentos",  icon: "🥦" },
+  { key: "limpieza",  label: "Limpieza",   icon: "🧹" },
+  { key: "activos",   label: "Activos",    icon: "📦" },
+];
 
+const NAV_COCINA = [
+  { key: "alimentos", label: "Alimentos",  icon: "🥦" },
+  { key: "limpieza",  label: "Limpieza",   icon: "🧹" },
+];
 
 function App() {
-  const [logged, setLogged] = useState(false);
-  const [user, setUser] = useState("");
-  const [pass, setPass] = useState("");
-  const [role, setRole] = useState("");
-  const [error, setError] = useState("");
-  const [page, setPage] = useState("dashboard");
+  const [logged, setLogged]   = useState(false);
+  const [user,   setUser]     = useState("");
+  const [pass,   setPass]     = useState("");
+  const [role,   setRole]     = useState("");
+  const [error,  setError]    = useState("");
+  const [page,   setPage]     = useState("dashboard");
 
-    useEffect(() => {
-    initDB();
-  }, []);
-
+  useEffect(() => { initDB(); }, []);
 
   const login = () => {
-    const usuario = user.trim();
-    const clave = pass.trim();
-
-    if (!usuario || !clave) {
-      setError("Ingrese usuario y contraseña");
-      return;
-    }
-
-    if (usuario === "admin" && clave === "1234") {
-      setRole("admin");
-      setLogged(true);
-      setPage("dashboard");
-      setError("");
-    } else if (usuario === "cocina" && clave === "1234") {
-      setRole("cocina");
-      setLogged(true);
-      setPage("alimentos");
-      setError("");
-    } else {
-      setError("Credenciales incorrectas");
-    }
+    const u = user.trim(), p = pass.trim();
+    if (!u || !p) { setError("Ingrese usuario y contraseña"); return; }
+    if (u === "admin"  && p === "1234") { setRole("admin");  setLogged(true); setPage("dashboard"); setError(""); }
+    else if (u === "cocina" && p === "1234") { setRole("cocina"); setLogged(true); setPage("alimentos"); setError(""); }
+    else setError("Credenciales incorrectas");
   };
 
-  const logout = () => {
-    setLogged(false);
-    setUser("");
-    setPass("");
-    setRole("");
-    setPage("dashboard");
-  };
+
+
+  const logout = () => { setLogged(false); setUser(""); setPass(""); setRole(""); setPage("dashboard"); };
+
+
 
   const renderPage = () => {
-    if (page === "dashboard") return <h1>Dashboard</h1>;
-
+    if (page === "dashboard") return <Dashboard />;
     if (page === "alimentos") return <Alimentos role={role} />;
-
-    if (page === "limpieza") return <Limpieza role={role} />;
-
-    if (page === "activos") return <Activos role={role} />;
-
-    if (page === "config")
-      return <h1>Configuración</h1>;
-
-    return <h1>SGICE</h1>;
+    if (page === "limpieza")  return <Limpieza  role={role} />;
+    if (page === "activos")   return <Activos   role={role} />;
+    return null;
   };
 
-  if (!logged) {
-    return (
-      <div className="login-container">
-        <div className="brand">SGICE</div>
 
-        <div className="login-box">
-          <div className="logo-circle">S</div>
 
-          <h1>Bienvenido</h1>
-          <p>
-            Sistema Gestor de Inventarios
-          </p>
+  
 
-          <input
-            type="text"
-            placeholder="Usuario"
-            value={user}
-            onChange={(e) =>
-              setUser(e.target.value)
-            }
-          />
-
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={pass}
-            onChange={(e) =>
-              setPass(e.target.value)
-            }
-            onKeyDown={(e) =>
-              e.key === "Enter" && login()
-            }
-          />
-
-          {error && (
-            <p className="error-msg">
-              {error}
-            </p>
-          )}
-
-          <button onClick={login}>
-            Ingresar
-          </button>
-        </div>
+  /* ── LOGIN ─────────────────────────────── */
+  if (!logged) return (
+    
+    <div className="login-container">
+      <div className="brand">SG<span>I</span>CE</div>
+      <div className="login-box">
+        <div className="logo-circle">
+        <img src={logo} alt="Logo SGICE" />
       </div>
-    );
-  }
+
+
+        <h1>Bienvenido</h1>
+        <p>Sistema Gestor de Inventarios</p>
+        <input
+          type="text" placeholder="Usuario" value={user}
+          onChange={e => setUser(e.target.value)}
+        />
+        <input
+          type="password" placeholder="Contraseña" value={pass}
+          onChange={e => setPass(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && login()}
+        />
+        {error && <p className="error-msg">{error}</p>}
+        <button onClick={login}>Ingresar al sistema</button>
+      </div>
+    </div>
+  );
+
+  /* ── APP ───────────────────────────────── */
+  const nav = role === "admin" ? NAV_ADMIN : NAV_COCINA;
+  const roleLabel = role === "admin" ? "Administrador" : "Cocina";
+  const roleInitial = role === "admin" ? "AD" : "CO";
+
+  
 
   return (
     <div className="panel">
+      {/* SIDEBAR */}
       <div className="sidebar">
-        <h2>SGICE</h2>
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <div className="logo-circle">
+              <img src={logo} alt="Logo SGICE" />
+            </div>
+            
+            <div className="sidebar-title">SGICE</div>
+          </div>
+          <div className="sidebar-sub">Inventarios</div>
+        </div>
 
-        {role === "admin" && (
-          <>
+        <div className="sidebar-nav">
+          <div className="sidebar-section">Módulos</div>
+          {nav.map(item => (
             <button
-              onClick={() =>
-                setPage("dashboard")
-              }
+              key={item.key}
+              className={page === item.key ? "active" : ""}
+              onClick={() => setPage(item.key)}
             >
-              Dashboard
+              <span>{item.icon}</span>
+              {item.label}
             </button>
+          ))}
+        </div>
 
-            <button
-              onClick={() =>
-                setPage("alimentos")
-              }
-            >
-              Alimentos
-            </button>
-
-            <button
-              onClick={() =>
-                setPage("limpieza")
-              }
-            >
-              Limpieza
-            </button>
-
-            <button
-              onClick={() =>
-                setPage("activos")
-              }
-            >
-              Activos
-            </button>
-
-          </>
-        )}
-
-        {role === "cocina" && (
-          <>
-            <button
-              onClick={() =>
-                setPage("alimentos")
-              }
-            >
-              Alimentos
-            </button>
-
-            <button
-              onClick={() =>
-                setPage("limpieza")
-              }
-            >
-              Limpieza
-            </button>
-          </>
-        )}
-
-        <button onClick={logout}>
-          Salir
-        </button>
+        <div className="sidebar-footer">
+          <div className="sidebar-user">
+            <div className="sidebar-avatar">{roleInitial}</div>
+            <div className="sidebar-user-info">
+              <div className="sidebar-user-name">{user}</div>
+              <div className="sidebar-user-role">{roleLabel}</div>
+            </div>
+          </div>
+          <button onClick={logout}>⬆ Cerrar sesión</button>
+        </div>
       </div>
 
+      {/* CONTENT */}
       <div className="content">
         {renderPage()}
       </div>

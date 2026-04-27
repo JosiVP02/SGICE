@@ -139,7 +139,39 @@ export async function agregarProducto(tabla, nombre, cantidad) {
     `INSERT INTO ${tabla} (nombre, cantidad) VALUES (?, ?)`,
     [nombre, cantidad]
   );
+
+  // 🧾 Registrar en historial
+  await db.execute(
+    `INSERT INTO movimientos
+    (modulo, producto, tipo, cantidad, detalle, usuario, fecha)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      tabla,
+      nombre,
+      "CREACION",
+      cantidad,
+      "Producto creado",
+      "admin",
+      new Intl.DateTimeFormat("sv-SE", {
+        timeZone: "America/Costa_Rica",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).format(new Date()).replace(",", "")
+    ]
+  );
+
 }
+
+
+
+
+
+
 
 export async function obtenerProductos(tabla) {
   return await db.select(
@@ -147,22 +179,112 @@ export async function obtenerProductos(tabla) {
   );
 }
 
-export async function editarProducto(tabla, id, nombre, cantidad) {
+
+
+export async function editarProducto(tabla, id, nombre, cantidad, usuario = "admin") {
+
+  // 🔍 Obtener datos anteriores
+  const anterior = await db.select(
+    `SELECT * FROM ${tabla} WHERE id = ?`,
+    [id]
+  );
+
+  if (!anterior.length) return;
+
+  const prodAnterior = anterior[0];
+
+  // ✏️ Actualizar producto
   await db.execute(
     `UPDATE ${tabla}
      SET nombre = ?, cantidad = ?
      WHERE id = ?`,
     [nombre, cantidad, id]
   );
+
+  // 📊 Calcular diferencia de cantidad
+  const diferencia = cantidad - prodAnterior.cantidad;
+
+  // 🧾 Registrar en historial
+  await db.execute(
+    `INSERT INTO movimientos
+    (modulo, producto, tipo, cantidad, detalle, usuario, fecha)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      tabla,
+      nombre,
+      "EDICION",
+      diferencia,
+      `Antes: ${prodAnterior.nombre} (${prodAnterior.cantidad}) → Ahora: ${nombre} (${cantidad})`,
+      usuario,
+      new Intl.DateTimeFormat("sv-SE", {
+        timeZone: "America/Costa_Rica",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).format(new Date()).replace(",", "")
+    ]
+  );
 }
 
+
+
+
+
+
+
+
 export async function eliminarProducto(tabla, id) {
+
+  // 🔍 Obtener producto antes de eliminar
+  const producto = await db.select(
+    `SELECT * FROM ${tabla} WHERE id = ?`,
+    [id]
+  );
+
+  if (!producto.length) return;
+
+  const nombre = producto[0].nombre;
+  const cantidad = producto[0].cantidad;
+
+  // 🧾 Guardar en historial
   await db.execute(
-    `DELETE FROM ${tabla}
-     WHERE id = ?`,
+    `INSERT INTO movimientos
+    (modulo, producto, tipo, cantidad, detalle, usuario, fecha)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      tabla,
+      nombre,
+      "ELIMINADO",
+      cantidad,
+      "Producto eliminado",
+      "admin", // puedes hacerlo dinámico luego
+      new Intl.DateTimeFormat("sv-SE", {
+        timeZone: "America/Costa_Rica",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).format(new Date()).replace(",", "")
+    ]
+  );
+
+  // 🗑️ Eliminar producto
+  await db.execute(
+    `DELETE FROM ${tabla} WHERE id = ?`,
     [id]
   );
 }
+
+
+
+
 
 // =========================
 // MOVIMIENTOS
@@ -386,6 +508,8 @@ export async function obtenerActivos() {
 }
 
 
+
+
 export async function editarActivo(data) {
   await db.execute(
     `UPDATE activos SET
@@ -442,6 +566,15 @@ export async function eliminarActivo(id, motivo = "BAJA") {
 
 }
 
+
+
+
+export async function eliminarActivoPerma(id) {
+  await db.execute(
+    "DELETE FROM activos WHERE id = ?",
+    [id]
+  );
+}
 
 
 
