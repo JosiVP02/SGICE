@@ -223,10 +223,13 @@ const confirm = (mensaje) =>
 
   const cargar = async () => setProductos(await obtenerProductos("alimentos"));
 
-  const cargarHistorial = async () => {
-    try { setHistorial(await obtenerMovimientos("alimentos")); } catch (e) { console.error(e); }
-  };
-
+const cargarHistorial = async (desde = "", hasta = "") => {
+  try {
+    setHistorial(await obtenerMovimientos("alimentos", { desde, hasta }));
+  } catch (e) {
+    console.error(e);
+  }
+};
 
 
   useEffect(() => { cargar(); cargarHistorial(); }, []);
@@ -589,11 +592,17 @@ const historialFiltrado = useMemo(() => {
             <div className="filtros-fecha">
               <div className="grupo-fecha">
                 <span>Desde</span>
-                <input type="date" value={fechaInicio} onChange={e=>setFechaInicio(e.target.value)} />
+                <input type="date" value={fechaInicio} onChange={async e => {
+                    setFechaInicio(e.target.value);
+                    await cargarHistorial(e.target.value, fechaFin);
+                  }} />
               </div>
               <div className="grupo-fecha">
                 <span>Hasta</span>
-                <input type="date" value={fechaFin} onChange={e=>setFechaFin(e.target.value)} />
+                <input type="date" value={fechaFin} onChange={async e => {
+                    setFechaFin(e.target.value);
+                    await cargarHistorial(fechaInicio, e.target.value);
+                  }} />
               </div>
 
               <div className="grupo-fecha">
@@ -614,6 +623,7 @@ const historialFiltrado = useMemo(() => {
                   setFechaInicio("");
                   setFechaFin("");
                   setOrdenFecha("desc");
+                  cargarHistorial(); 
                 }}
               >
                 Limpiar

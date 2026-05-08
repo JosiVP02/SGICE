@@ -117,7 +117,57 @@ export async function initDB() {
 
 
 
+        // =====================
+        // ÍNDICES
+        // =====================
 
+        // MOVIMIENTOS
+        await db.execute(`
+          CREATE INDEX IF NOT EXISTS idx_movimientos_modulo
+          ON movimientos(modulo)
+        `);
+
+        await db.execute(`
+          CREATE INDEX IF NOT EXISTS idx_movimientos_fecha
+          ON movimientos(fecha)
+        `);
+
+        await db.execute(`
+          CREATE INDEX IF NOT EXISTS idx_movimientos_producto
+          ON movimientos(producto)
+        `);
+
+        await db.execute(`
+          CREATE INDEX IF NOT EXISTS idx_movimientos_tipo
+          ON movimientos(tipo)
+        `);
+
+        // ACTIVOS
+        await db.execute(`
+          CREATE INDEX IF NOT EXISTS idx_activos_categoria
+          ON activos(categoria)
+        `);
+
+        await db.execute(`
+          CREATE INDEX IF NOT EXISTS idx_activos_estado
+          ON activos(estado)
+        `);
+
+        await db.execute(`
+          CREATE INDEX IF NOT EXISTS idx_activos_placa
+          ON activos(placa)
+        `);
+
+        // BITÁCORA
+        await db.execute(`
+          CREATE INDEX IF NOT EXISTS idx_bitacora_activo
+          ON bitacora_activos(activo_id)
+        `);
+
+        await db.execute(`
+          CREATE INDEX IF NOT EXISTS idx_bitacora_fecha
+          ON bitacora_activos(fecha)
+        `);
 
 
 
@@ -380,16 +430,20 @@ export async function salidaStock(tabla, id, cantidad, detalle, usuario, fechaMa
 }
 
 
-export async function obtenerMovimientos(modulo) {
-  return await db.select(
-    `SELECT *
-     FROM movimientos
-     WHERE modulo = ?
-     ORDER BY id DESC
-     LIMIT 100`,
-    [modulo]
-  );
+export async function obtenerMovimientos(modulo, filtros = {}) {
+  const { desde, hasta } = filtros;
+
+  let query = `SELECT * FROM movimientos WHERE modulo = ? `;
+  const params = [modulo];
+
+  if (desde) { query += `AND fecha >= ? `; params.push(desde + " 00:00:00"); }
+  if (hasta) { query += `AND fecha <= ? `; params.push(hasta + " 23:59:59"); }
+
+  query += `ORDER BY id DESC`;
+
+  return await db.select(query, params);
 }
+
 
 
 export async function ajusteStock(tabla, id, nuevaCantidad, detalle, usuario) {

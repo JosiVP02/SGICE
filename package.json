@@ -11,7 +11,6 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tauri-apps/cli": "^2.10.1",
     "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-fs": "^2.5.0",
     "@tauri-apps/plugin-sql": "^2.4.0",
@@ -22,10 +21,12 @@
     "react-dom": "^19.2.4",
     "react-select": "^5.10.2",
     "recharts": "^3.8.1",
+    "use-debounce": "^10.1.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@tauri-apps/cli": "^2.11.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

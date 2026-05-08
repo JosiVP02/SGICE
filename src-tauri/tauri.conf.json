@@ -1,10 +1,10 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "sgice",
-  "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "productName": "SGICE",
+  "version": "1.0.0",
+  "identifier": "cr.josivp.sgice",
   "build": {
-    "frontendDist": "dist/",
+    "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"

@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  memo
+} from "react";
+
+
 import {
   obtenerProductos,
   obtenerActivos,
@@ -14,6 +21,8 @@ import {
 
 
 
+import { useDebounce } from "use-debounce";
+
 
 import Select from "react-select";
 
@@ -26,6 +35,13 @@ const TOOLTIP_STYLE = {
   fontSize: 13,
 };
 const AXIS_TICK = { fill: "#94a3b8", fontSize: 11 };
+
+
+
+
+
+
+
 
 const SELECT_DARK = {
   control: (b) => ({ ...b, background: "#0f172a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, color: "#e2e8f0", minHeight: 40, boxShadow:"none" }),
@@ -40,17 +56,37 @@ menu: (b) => ({...b,background: "#0f172a",border: "1px solid rgba(255,255,255,0.
   indicatorSeparator: () => ({ display: "none" }),
 };
 
-// ── Helpers ───────────────────────────────────
-function parseFecha(f) { return new Date((f || "").replace(" ", "T")); }
 
-function fmtHora(f) {
-  if (!f) return "—";
+
+
+
+
+
+
+// ── Helpers ───────────────────────────────────
+
+
+
+
+
+function fmtHora(fechaObj) {
+  if (!fechaObj) return "—";
+
   try {
-    return new Date(f.replace(" ","T")).toLocaleString("es-CR", {
-      day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", hour12:false,
+    return fechaObj.toLocaleString("es-CR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
     });
-  } catch { return f; }
+  } catch {
+    return "—";
+  }
 }
+
+
+
 
 function TipoBadge({ tipo }) {
   const t = (tipo || "").toLowerCase();
@@ -61,6 +97,13 @@ function TipoBadge({ tipo }) {
   if (t === "creacion") return <span className="badge creacion">Creación</span>;
   return <span className="badge sin">{tipo}</span>;
 }
+
+
+
+
+
+
+
 
 function KpiCard({ icon, title, value, sub, subColor, accent="#6366f1" }) {
   return (
@@ -77,14 +120,31 @@ function KpiCard({ icon, title, value, sub, subColor, accent="#6366f1" }) {
   );
 }
 
-function ChartCard({ title, icon, children, style }) {
+
+
+
+
+const ChartCard = memo(function ChartCard({
+  title,
+  icon,
+  children,
+  style
+}) {
   return (
     <div className="chart-card" style={style}>
-      <h3>{icon && <span style={{ marginRight:8 }}>{icon}</span>}{title}</h3>
+      <h3>
+        {icon && <span style={{ marginRight: 8 }}>{icon}</span>}
+        {title}
+      </h3>
+
       {children}
     </div>
   );
-}
+});
+
+
+
+
 
 function EmptyMsg({ msg }) {
   return <div style={{ textAlign:"center", padding:"32px 0", color:"#64748b", fontSize:13 }}>{msg}</div>;
@@ -104,6 +164,23 @@ export default function Dashboard() {
 
 
 
+const [debouncedProducto] = useDebounce(producto, 300);
+
+const [debouncedInicio] = useDebounce(
+  fechaInicio,
+  300
+);
+
+const [debouncedFin] = useDebounce(
+  fechaFin,
+  300
+);
+
+
+
+
+
+
 useEffect(() => {
   setFechaInicio("");
   setFechaFin("");
@@ -115,6 +192,10 @@ useEffect(() => {
   useEffect(() => { cargar(); }, []);
   useEffect(() => { setProducto(""); }, [modulo]);
 
+
+
+
+
   async function cargar() {
     const [a,l,ac,mA,mL] = await Promise.all([
       obtenerProductos("alimentos"), obtenerProductos("limpieza"),
@@ -122,51 +203,171 @@ useEffect(() => {
       obtenerMovimientos("alimentos"), obtenerMovimientos("limpieza"),
     ]);
     setAlimentos(a||[]); setLimpieza(l||[]); setActivos(ac||[]);
-    setMovimientos([...(mA||[]), ...(mL||[])]);
+    const movs = [...(mA || []), ...(mL || [])].map(m => ({
+    ...m,
+
+      // Fecha completa ya parseada
+      fechaObj: new Date(
+        (m.fecha || "").replace(" ", "T")
+      ),
+
+      // Solo YYYY-MM-DD
+      fechaDia: (m.fecha || "").slice(0, 10),
+    }));
+
+    setMovimientos(movs);
   }
+
+
+
+
 
   const productosLista = modulo==="alimentos" ? alimentos : limpieza;
 
   // ── KPIs ──
-  const sinStockAlim  = alimentos.filter(p => Number(p.cantidad) <= 0);
-  const sinStockLimp  = limpieza.filter(p  => Number(p.cantidad) <= 0);
-  const totalSinStock = sinStockAlim.length + sinStockLimp.length;
-  const bajosA        = alimentos.filter(p => Number(p.cantidad) > 0 && Number(p.cantidad) < 5);
-  const bajosL        = limpieza.filter(p  => Number(p.cantidad) > 0 && Number(p.cantidad) < 5);
+const sinStockAlim = useMemo(
+  () => alimentos.filter(p => Number(p.cantidad) <= 0),
+  [alimentos]
+);
 
-  const activosOk     = activos.filter(a => a.estado==="ACTIVO").length;
-  const activosDañado = activos.filter(a => a.estado==="DAÑADO").length;
-  const activosBaja   = activos.filter(a => a.estado==="BAJA").length;
 
-  const hoyStr    = new Date().toISOString().slice(0,10);
-  const movsHoy   = movimientos.filter(m => (m.fecha||"").slice(0,10)===hoyStr);
+
+
+const sinStockLimp = useMemo(
+  () => limpieza.filter(p => Number(p.cantidad) <= 0),
+  [limpieza]
+);
+
+
+
+
+const totalSinStock = useMemo(
+  () => sinStockAlim.length + sinStockLimp.length,
+  [sinStockAlim, sinStockLimp]
+);
+
+
+
+
+const bajosA = useMemo(
+  () => alimentos.filter(
+    p => Number(p.cantidad) > 0 && Number(p.cantidad) < 5
+  ),
+  [alimentos]
+);
+
+
+
+
+const bajosL = useMemo(
+  () => limpieza.filter(
+    p => Number(p.cantidad) > 0 && Number(p.cantidad) < 5
+  ),
+  [limpieza]
+);
+
+
+
+
+const activosOk = useMemo(
+  () => activos.filter(a => a.estado === "ACTIVO").length,
+  [activos]
+);
+
+
+
+const activosDañado = useMemo(
+  () => activos.filter(a => a.estado === "DAÑADO").length,
+  [activos]
+);
+
+
+
+
+const activosBaja = useMemo(
+  () => activos.filter(a => a.estado === "BAJA").length,
+  [activos]
+);
+
+
+
+
+  
+
+const hoyStr = useMemo(() => {
+  const hoy = new Date();
+
+  return (
+    hoy.getFullYear() +
+    "-" +
+    String(hoy.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(hoy.getDate()).padStart(2, "0")
+  );
+}, []);
+
+
+
+const movsHoy = useMemo(
+  () =>
+    movimientos.filter(
+      m => m.fechaDia === hoyStr
+    ),
+  [movimientos, hoyStr]
+);
+
+
+
+
+
+
   const salidasHoy  = movsHoy.filter(m => m.tipo==="Salida").length;
   const entradasHoy = movsHoy.filter(m => m.tipo==="Entrada").length;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // ── Movimientos recientes ──
-  const recientes = useMemo(() =>
-    [...movimientos].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).slice(0,10),
-    [movimientos]
-  );
+const recientes = useMemo(() => {
+  return [...movimientos]
+    .sort((a, b) => b.fechaObj - a.fechaObj)
+    .slice(0, 10);
+}, [movimientos]);
+
+
+
+
 
   // ── Top 5 consumidos ──
 const topConsumidos = useMemo(() => {
 
-  const ini = fechaInicio
-    ? new Date(fechaInicio + "T00:00:00")
-    : new Date("2000-01-01");
+const ini = debouncedInicio
+  ? new Date(debouncedInicio + "T00:00:00")
+  : new Date("2000-01-01");
 
-  const fin = fechaFin
-    ? new Date(fechaFin + "T23:59:59")
-    : new Date();
+const fin = debouncedFin
+  ? new Date(debouncedFin + "T23:59:59")
+  : new Date();
 
   const map = {};
 
   movimientos
     .filter(m =>
       m.tipo === "Salida" &&
-      parseFecha(m.fecha) >= ini &&
-      parseFecha(m.fecha) <= fin
+      m.fechaObj >= ini &&
+      m.fechaObj <= fin
     )
     .forEach(m => {
       map[m.producto] =
@@ -183,48 +384,60 @@ const topConsumidos = useMemo(() => {
     .sort((a,b) => b.consumo - a.consumo)
     .slice(0,5);
 
-}, [movimientos, fechaInicio, fechaFin]);
+}, [movimientos, debouncedInicio, debouncedFin]);
 
 
   
 
+
+
+
   // ── Gráfico consumo ──
 
 const filtrados = useMemo(() => {
-  const ini = fechaInicio
-    ? new Date(fechaInicio + "T00:00:00")
+  const ini = debouncedInicio
+    ? new Date(debouncedInicio  + "T00:00:00")
     : new Date("2000-01-01");
 
-  const fin = fechaFin
-    ? new Date(fechaFin + "T23:59:59")
+  const fin = debouncedFin
+    ? new Date(debouncedFin  + "T23:59:59")
     : new Date();
 
   return movimientos.filter(m => {
-    const f = parseFecha(m.fecha);
+    const f = m.fechaObj;
 
     return (
       m.modulo?.toLowerCase() === modulo &&
-      (!producto || m.producto?.toLowerCase() === producto.toLowerCase()) &&
+      (!debouncedProducto ||
+      m.producto?.toLowerCase() ===
+      debouncedProducto.toLowerCase())
+        &&
       f >= ini &&
       f <= fin &&
       m.tipo === "Salida"
     );
   });
-}, [movimientos, modulo, producto, fechaInicio, fechaFin]);
+}, [
+  movimientos,
+  modulo,
+  debouncedProducto,
+  debouncedInicio,
+  debouncedFin
+]);
+
+
 
 
 
 const dataConsumo = useMemo(() => {
-  const ini = fechaInicio
-    ? new Date(fechaInicio + "T00:00:00")
-    : new Date(
-        Math.min(
-          ...movimientos.map(m => parseFecha(m.fecha).getTime())
-        )
-      );
+const ini = debouncedInicio
+  ? new Date(debouncedInicio + "T00:00:00")
+  : movimientos.length
+    ? new Date(Math.min(...movimientos.map(m => m.fechaObj.getTime())))
+    : new Date();
 
-  const fin = fechaFin
-    ? new Date(fechaFin + "T23:59:59")
+   const fin = debouncedFin
+    ? new Date(debouncedFin  + "T23:59:59")
     : new Date();
 
   const map = {};
@@ -246,25 +459,18 @@ const dataConsumo = useMemo(() => {
 
   // Sumar consumos
   filtrados.forEach(m => {
-    const f = parseFecha(m.fecha);
+  const k = m.fechaDia;
 
-    const k =
-      f.getFullYear() +
-      "-" +
-      String(f.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(f.getDate()).padStart(2, "0");
-
-    if (map[k] !== undefined) {
-      map[k] += Math.abs(m.cantidad || 0);
-    }
-  });
+  if (map[k] !== undefined) {
+        map[k] += Math.abs(m.cantidad || 0);
+      }
+    });
 
   return Object.entries(map).map(([fecha, consumo]) => ({
     fecha,
     consumo
   }));
-}, [filtrados, fechaInicio, fechaFin, movimientos]);
+}, [filtrados, debouncedInicio, debouncedFin, movimientos]);
 
 
 
@@ -281,10 +487,20 @@ const dataConsumo = useMemo(() => {
     {name:"Dañado",  value:activosDañado, color:"#f59e0b"},
   ].filter(d=>d.value>0);
 
-  const opcionesProductos = [
-    {value:"",label:"Todos los productos"},
-    ...productosLista.map(p=>({value:p.nombre,label:p.nombre})),
-  ];
+
+
+
+
+const opcionesProductos = useMemo(() => [
+  { value: "", label: "Todos los productos" },
+  ...productosLista.map(p => ({
+    value: p.nombre,
+    label: p.nombre
+  }))
+], [productosLista]);
+
+
+  
 
   // ── Input style reutilizable ──
   const inputStyle = {
@@ -296,6 +512,11 @@ const dataConsumo = useMemo(() => {
     fontSize:11, fontWeight:700, color:"#64748b",
     textTransform:"uppercase", letterSpacing:".5px",
   };
+
+
+
+
+
 
   return (
     <div className="dashboard">
@@ -375,8 +596,8 @@ const dataConsumo = useMemo(() => {
         <ChartCard title="Movimientos recientes" icon="🕒">
           {recientes.length===0 ? <EmptyMsg msg="No hay movimientos registrados"/> : (
             <div style={{maxHeight:280,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
-              {recientes.map((m,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:10,
+              {recientes.map((m)=>(
+                <div key={m.id} style={{display:"flex",alignItems:"center",gap:10,
                   padding:"8px 10px",borderRadius:8,
                   background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.05)"}}>
                   <div style={{width:76,flexShrink:0}}><TipoBadge tipo={m.tipo}/></div>
@@ -386,7 +607,7 @@ const dataConsumo = useMemo(() => {
                     {m.cantidad>0?"+":""}{m.cantidad}
                   </div>
                   <div style={{fontSize:11,color:"#475569",flexShrink:0,minWidth:78,textAlign:"right"}}>
-                    {fmtHora(m.fecha)}
+                    {fmtHora(m.fechaObj)}
                   </div>
                 </div>
               ))}
@@ -561,8 +782,8 @@ const dataConsumo = useMemo(() => {
                     </tr>
                   </thead>
                   <tbody>
-                    {todos.map((p,i)=>(
-                      <tr key={i} style={{borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+                    {todos.map((p)=>(
+                      <tr key={p.id} style={{borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
                         <td style={{padding:"8px 10px",color:"#e2e8f0",fontWeight:500}}>{p.nombre}</td>
                         <td style={{padding:"8px 10px"}}>
                           <span style={{

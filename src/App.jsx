@@ -1,11 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import "./styles/app.css";
-import Alimentos from "./pages/Alimentos";
 import { initDB } from "./services/db";
-import Limpieza from "./pages/Limpieza";
-import Activos from "./pages/Activos";
-import Dashboard from "./pages/Dashboard";
 import logo from "./assets/logo.png";
+
+const Alimentos = lazy(() => import("./pages/Alimentos"));
+const Limpieza = lazy(() => import("./pages/Limpieza"));
+const Activos = lazy(() => import("./pages/Activos"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+
+
 
 
 const NAV_ADMIN = [
@@ -44,14 +47,14 @@ function App() {
 
 
 
-  const renderPage = () => {
-    if (page === "dashboard") return <Dashboard />;
-    if (page === "alimentos") return <Alimentos role={role} />;
-    if (page === "limpieza")  return <Limpieza  role={role} />;
-    if (page === "activos")   return <Activos   role={role} />;
-    return null;
-  };
+const pages = {
+  dashboard: <Dashboard />,
+  alimentos: <Alimentos role={role} />,
+  limpieza: <Limpieza role={role} />,
+  activos: <Activos role={role} />
+};
 
+const renderPage = () => pages[page] || null;
 
 
   
@@ -132,10 +135,20 @@ function App() {
         </div>
       </div>
 
+   
       {/* CONTENT */}
       <div className="content">
-        {renderPage()}
+        <Suspense
+          fallback={
+            <div className="loader">
+              Cargando módulo...
+            </div>
+          }
+        >
+          {renderPage()}
+        </Suspense>
       </div>
+      
     </div>
   );
 }
