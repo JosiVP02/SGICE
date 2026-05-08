@@ -28,9 +28,13 @@ function Alimentos({ role }) {
   const [entradaCantidad,setEntradaCantidad]= useState("");
   const [entradaDetalle, setEntradaDetalle] = useState("");
 
+  const [entradaFecha, setEntradaFecha] = useState("");
+
   const [salidaId,       setSalidaId]       = useState("");
   const [salidaCantidad, setSalidaCantidad] = useState("");
   const [salidaDetalle,  setSalidaDetalle]  = useState("");
+
+  const [salidaFecha, setSalidaFecha] = useState("");
 
   const [editando,    setEditando]    = useState(null);
   const [editNombre,  setEditNombre]  = useState("");
@@ -38,6 +42,8 @@ function Alimentos({ role }) {
 
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin,    setFechaFin]    = useState("");
+
+  const [ordenFecha, setOrdenFecha] = useState("desc");
 
   const esAdmin  = role === "admin";
   const esCocina = role === "cocina";
@@ -259,8 +265,16 @@ const confirm = (mensaje) =>
   const entrada = async () => {
     if (!entradaId || Number(entradaCantidad) <= 0) { toast("Datos inválidos", "error"); return; }
     const usuarioActual = esAdmin ? "admin" : "cocina";
-    await entradaStock("alimentos", Number(entradaId), Number(entradaCantidad), entradaDetalle || "Entrada manual", usuarioActual);
+    await entradaStock(
+      "alimentos",
+      Number(entradaId),
+      Number(entradaCantidad),
+      entradaDetalle || "Entrada manual",
+      usuarioActual,
+      entradaFecha || null
+    );
     setEntradaId(""); setEntradaCantidad(""); setEntradaDetalle("");
+    setEntradaFecha("");
     await cargar(); await cargarHistorial(); toast("Entrada registrada");
   };
 
@@ -274,8 +288,17 @@ const confirm = (mensaje) =>
     if (Number(salidaCantidad) <= 0) { toast("Cantidad inválida", "error"); return; }
     if (Number(salidaCantidad) > prod.cantidad) { toast("Stock insuficiente", "error"); return; }
     const usuarioActual = esAdmin ? "admin" : "cocina";
-    await salidaStock("alimentos", Number(salidaId), Number(salidaCantidad), salidaDetalle || "Salida manual", usuarioActual);
+    await salidaStock(
+      "alimentos",
+      Number(salidaId),
+      Number(salidaCantidad),
+      salidaDetalle || "Salida manual",
+      usuarioActual,
+      salidaFecha || null
+    );
+
     setSalidaId(""); setSalidaCantidad(""); setSalidaDetalle("");
+    setSalidaFecha("");
     await cargar(); await cargarHistorial(); toast("Salida registrada");
   };
 
@@ -311,18 +334,30 @@ const confirm = (mensaje) =>
 
 
 
-  
-
-  const historialFiltrado = useMemo(() => {
-    return historial.filter(h => {
+const historialFiltrado = useMemo(() => {
+  return historial
+    .filter(h => {
       if (!fechaInicio && !fechaFin) return true;
       if (!h.fecha) return false;
-      const fechaDB = h.fecha.slice(0,10);
+
+      const fechaDB = h.fecha.slice(0, 10);
+
       if (fechaInicio && fechaDB < fechaInicio) return false;
-      if (fechaFin    && fechaDB > fechaFin)    return false;
+      if (fechaFin && fechaDB > fechaFin) return false;
+
       return true;
+    })
+    .sort((a, b) => {
+      if (ordenFecha === "asc") {
+        return new Date(a.fecha) - new Date(b.fecha);
+      }
+
+      return new Date(b.fecha) - new Date(a.fecha);
     });
-  }, [historial, fechaInicio, fechaFin]);
+
+}, [historial, fechaInicio, fechaFin, ordenFecha]);
+
+
 
   async function exportarInventarioExcel() {
     const data = productos.map(p => ({ Producto: p.nombre, Cantidad: p.cantidad }));
@@ -498,6 +533,14 @@ const confirm = (mensaje) =>
           <input type="number" min="1" placeholder="Cantidad" value={entradaCantidad} onChange={e=>setEntradaCantidad(e.target.value)} />
           <label className="form-label">Detalle</label>
           <input placeholder="" value={entradaDetalle} onChange={e=>setEntradaDetalle(e.target.value)} />
+          <label className="form-label">Fecha (opcional)</label>
+
+            <input
+              type="date"
+              value={entradaFecha}
+              onChange={e => setEntradaFecha(e.target.value)}
+            />
+
           <button onClick={entrada}>Registrar Entrada</button>
         </div>
       )}
@@ -522,6 +565,15 @@ const confirm = (mensaje) =>
           <input type="number" min="1" placeholder="Cantidad" value={salidaCantidad} onChange={e=>setSalidaCantidad(e.target.value)} />
           <label className="form-label">Detalle</label>
           <input placeholder="" value={salidaDetalle} onChange={e=>setSalidaDetalle(e.target.value)} />
+
+          <label className="form-label">Fecha (opcional)</label>
+
+            <input
+              type="date"
+              value={salidaFecha}
+              onChange={e => setSalidaFecha(e.target.value)}
+            />
+
           <button onClick={salida}>Registrar Salida</button>
         </div>
 
@@ -543,8 +595,31 @@ const confirm = (mensaje) =>
                 <span>Hasta</span>
                 <input type="date" value={fechaFin} onChange={e=>setFechaFin(e.target.value)} />
               </div>
-              <button className="btn-clear" onClick={()=>{setFechaInicio("");setFechaFin("");}}>Limpiar</button>
-              <div className="export-buttons">
+
+              <div className="grupo-fecha">
+                <span>Orden</span>
+
+                <select
+                  value={ordenFecha}
+                  onChange={e => setOrdenFecha(e.target.value)}
+                >
+                  <option value="desc">⬇ Más reciente</option>
+                  <option value="asc">⬆ Más antiguo</option>
+                </select>
+              </div>
+
+              <button
+                className="btn-clear"
+                onClick={() => {
+                  setFechaInicio("");
+                  setFechaFin("");
+                  setOrdenFecha("desc");
+                }}
+              >
+                Limpiar
+              </button> 
+
+             <div className="export-buttons">
                 <button className="btn-export excel" onClick={exportarHistorialExcel}>📊 Excel</button>
                 <button className="btn-export pdf"   onClick={exportarHistorialPDF}>📄 PDF</button>
               </div>

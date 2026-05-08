@@ -29,7 +29,8 @@ const AXIS_TICK = { fill: "#94a3b8", fontSize: 11 };
 
 const SELECT_DARK = {
   control: (b) => ({ ...b, background: "#0f172a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, color: "#e2e8f0", minHeight: 40, boxShadow:"none" }),
-  menu:    (b) => ({ ...b, background: "#0f172a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, zIndex: 50 }),
+menu: (b) => ({...b,background: "#0f172a",border: "1px solid rgba(255,255,255,0.15)",
+  borderRadius: 10,}),
   option:  (b, s) => ({ ...b, background: s.isFocused ? "#1e293b" : "#0f172a", color: "#e2e8f0", cursor:"pointer", fontSize:13 }),
   singleValue: (b) => ({ ...b, color: "#e2e8f0" }),
   input:       (b) => ({ ...b, color: "#e2e8f0" }),
@@ -100,11 +101,16 @@ export default function Dashboard() {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin,    setFechaFin]    = useState("");
 
-  useEffect(() => {
-    const hoy = new Date();
-    setFechaInicio(new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0,10));
-    setFechaFin(hoy.toISOString().slice(0,10));
-  }, []);
+
+
+
+useEffect(() => {
+  setFechaInicio("");
+  setFechaFin("");
+}, []);
+
+
+
 
   useEffect(() => { cargar(); }, []);
   useEffect(() => { setProducto(""); }, [modulo]);
@@ -144,41 +150,131 @@ export default function Dashboard() {
   );
 
   // ── Top 5 consumidos ──
-  const topConsumidos = useMemo(() => {
-    if (!fechaInicio||!fechaFin) return [];
-    const ini=new Date(fechaInicio+"T00:00:00"), fin=new Date(fechaFin+"T23:59:59");
-    const map={};
-    movimientos
-      .filter(m => m.tipo==="Salida" && parseFecha(m.fecha)>=ini && parseFecha(m.fecha)<=fin)
-      .forEach(m => { map[m.producto]=(map[m.producto]||0)+Math.abs(m.cantidad||0); });
-    return Object.entries(map)
-      .map(([name,consumo])=>({ name:name.length>16?name.slice(0,16)+"…":name, consumo }))
-      .sort((a,b)=>b.consumo-a.consumo).slice(0,5);
-  }, [movimientos,fechaInicio,fechaFin]);
+const topConsumidos = useMemo(() => {
+
+  const ini = fechaInicio
+    ? new Date(fechaInicio + "T00:00:00")
+    : new Date("2000-01-01");
+
+  const fin = fechaFin
+    ? new Date(fechaFin + "T23:59:59")
+    : new Date();
+
+  const map = {};
+
+  movimientos
+    .filter(m =>
+      m.tipo === "Salida" &&
+      parseFecha(m.fecha) >= ini &&
+      parseFecha(m.fecha) <= fin
+    )
+    .forEach(m => {
+      map[m.producto] =
+        (map[m.producto] || 0) + Math.abs(m.cantidad || 0);
+    });
+
+  return Object.entries(map)
+    .map(([name, consumo]) => ({
+      name: name.length > 16
+        ? name.slice(0,16) + "…"
+        : name,
+      consumo
+    }))
+    .sort((a,b) => b.consumo - a.consumo)
+    .slice(0,5);
+
+}, [movimientos, fechaInicio, fechaFin]);
+
+
+  
 
   // ── Gráfico consumo ──
-  const filtrados = useMemo(() => {
-    if (!fechaInicio||!fechaFin) return [];
-    const ini=new Date(fechaInicio+"T00:00:00"), fin=new Date(fechaFin+"T23:59:59");
-    return movimientos.filter(m => {
-      const f=parseFecha(m.fecha);
-      return m.modulo?.toLowerCase()===modulo &&
-             (!producto||m.producto?.toLowerCase()===producto.toLowerCase()) &&
-             f>=ini && f<=fin && m.tipo==="Salida";
-    });
-  }, [movimientos,modulo,producto,fechaInicio,fechaFin]);
 
-  const dataConsumo = useMemo(() => {
-    if (!fechaInicio||!fechaFin) return [];
-    const map={}, cur=new Date(fechaInicio), fin=new Date(fechaFin);
-    while (cur<=fin) { map[cur.toISOString().slice(0,10)]=0; cur.setDate(cur.getDate()+1); }
-    filtrados.forEach(m => {
-      const k=parseFecha(m.fecha).toISOString().slice(0,10);
-      if (map[k]!==undefined) map[k]+=Math.abs(m.cantidad||0);
-    });
-    return Object.entries(map).map(([fecha,consumo])=>({fecha,consumo}));
-  }, [filtrados,fechaInicio,fechaFin]);
+const filtrados = useMemo(() => {
+  const ini = fechaInicio
+    ? new Date(fechaInicio + "T00:00:00")
+    : new Date("2000-01-01");
 
+  const fin = fechaFin
+    ? new Date(fechaFin + "T23:59:59")
+    : new Date();
+
+  return movimientos.filter(m => {
+    const f = parseFecha(m.fecha);
+
+    return (
+      m.modulo?.toLowerCase() === modulo &&
+      (!producto || m.producto?.toLowerCase() === producto.toLowerCase()) &&
+      f >= ini &&
+      f <= fin &&
+      m.tipo === "Salida"
+    );
+  });
+}, [movimientos, modulo, producto, fechaInicio, fechaFin]);
+
+
+
+const dataConsumo = useMemo(() => {
+  const ini = fechaInicio
+    ? new Date(fechaInicio + "T00:00:00")
+    : new Date(
+        Math.min(
+          ...movimientos.map(m => parseFecha(m.fecha).getTime())
+        )
+      );
+
+  const fin = fechaFin
+    ? new Date(fechaFin + "T23:59:59")
+    : new Date();
+
+  const map = {};
+  const cur = new Date(ini);
+
+  // Crear todas las fechas del rango
+  while (cur <= fin) {
+    const key =
+      cur.getFullYear() +
+      "-" +
+      String(cur.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(cur.getDate()).padStart(2, "0");
+
+    map[key] = 0;
+
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  // Sumar consumos
+  filtrados.forEach(m => {
+    const f = parseFecha(m.fecha);
+
+    const k =
+      f.getFullYear() +
+      "-" +
+      String(f.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(f.getDate()).padStart(2, "0");
+
+    if (map[k] !== undefined) {
+      map[k] += Math.abs(m.cantidad || 0);
+    }
+  });
+
+  return Object.entries(map).map(([fecha, consumo]) => ({
+    fecha,
+    consumo
+  }));
+}, [filtrados, fechaInicio, fechaFin, movimientos]);
+
+
+
+
+
+
+
+
+
+  
   const dataActivos = [
     {name:"Activo",  value:activosOk,     color:"#22c55e"},
     {name:"De baja", value:activosBaja,   color:"#f04438"},
@@ -315,10 +411,23 @@ export default function Dashboard() {
           )},
           { label:"Producto", content:(
             <div style={{minWidth:220}}>
-              <Select options={opcionesProductos}
-                value={opcionesProductos.find(o=>o.value===producto)||null}
-                onChange={sel=>setProducto(sel?.value||"")}
-                placeholder="Todos" isSearchable isClearable styles={SELECT_DARK}/>
+              <Select
+                options={opcionesProductos}
+                value={opcionesProductos.find(o => o.value === producto) || null}
+                onChange={sel => setProducto(sel?.value || "")}
+                placeholder="Todos"
+                isSearchable
+                isClearable
+                menuPortalTarget={document.body}
+                menuPosition="fixed"
+                styles={{
+                  ...SELECT_DARK,
+                  menuPortal: (base) => ({
+                    ...base,
+                    zIndex: 9999,
+                  }),
+                }}
+              />
             </div>
           )},
           { label:"Desde", content:<input type="date" value={fechaInicio} onChange={e=>setFechaInicio(e.target.value)} style={inputStyle}/> },
@@ -329,6 +438,29 @@ export default function Dashboard() {
             {f.content}
           </div>
         ))}
+
+
+          <button
+          onClick={() => {
+            setProducto("");
+            setFechaInicio("");
+            setFechaFin("");
+          }}
+          style={{
+            padding: "10px 16px",
+            borderRadius: 10,
+            border: "1px solid rgba(255,255,255,0.1)",
+            background: "#1e293b",
+            color: "#e2e8f0",
+            cursor: "pointer",
+            fontWeight: 600,
+            height: 40
+          }}
+        >
+          Limpiar filtros
+        </button>
+
+
       </div>
 
       {/* ── FILA 2: Consumo + Top 5 ── */}

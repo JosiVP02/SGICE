@@ -290,7 +290,38 @@ export async function eliminarProducto(tabla, id) {
 // MOVIMIENTOS
 // =========================
 
-export async function entradaStock(tabla, id, cantidad, detalle, usuario) {
+
+function obtenerFechaCR(fechaManual = null) {
+
+  // Si viene una fecha manual
+  if (fechaManual) {
+
+    // agregar hora actual
+    const ahora = new Date();
+
+    const hora = String(ahora.getHours()).padStart(2, "0");
+    const min  = String(ahora.getMinutes()).padStart(2, "0");
+    const seg  = String(ahora.getSeconds()).padStart(2, "0");
+
+    return `${fechaManual} ${hora}:${min}:${seg}`;
+  }
+
+  // fecha actual CR
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/Costa_Rica",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).format(new Date()).replace(",", "");
+}
+
+
+
+export async function entradaStock(tabla, id, cantidad, detalle, usuario, fechaManual = null) {
   await db.execute(
     `UPDATE ${tabla}
      SET cantidad = cantidad + ?
@@ -314,21 +345,12 @@ export async function entradaStock(tabla, id, cantidad, detalle, usuario) {
       cantidad,
       detalle,
       usuario,
-      new Intl.DateTimeFormat("sv-SE", {
-      timeZone: "America/Costa_Rica",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false
-    }).format(new Date()).replace(",", "")
+      obtenerFechaCR(fechaManual)
     ]
   );
 }
 
-export async function salidaStock(tabla, id, cantidad, detalle, usuario) {
+export async function salidaStock(tabla, id, cantidad, detalle, usuario, fechaManual = null) {
   await db.execute(
     `UPDATE ${tabla}
      SET cantidad = cantidad - ?
@@ -352,16 +374,7 @@ export async function salidaStock(tabla, id, cantidad, detalle, usuario) {
       cantidad,
       detalle,
       usuario,
-      new Intl.DateTimeFormat("sv-SE", {
-      timeZone: "America/Costa_Rica",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false
-    }).format(new Date()).replace(",", "")
+      obtenerFechaCR(fechaManual)
     ]
   );
 }
