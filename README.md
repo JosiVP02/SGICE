@@ -72,6 +72,10 @@ The application was built using React, Tauri and SQLite, providing a fast deskto
 
 
 
+### Users
+- admin-1234
+- cocina-1234
+
 
 ## 🚀 Installation
 
@@ -81,7 +85,4 @@ Clone the repository:
 git clone https://github.com/JosiVP02/sgice.git
 
 
-### Users
-- admin-1234
-- cocina-1234
 
