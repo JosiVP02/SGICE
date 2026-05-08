@@ -31,7 +31,8 @@ The application was built using React, Tauri and SQLite, providing a fast deskto
 
 ### Database
 - SQLite
-
+Local Database-portable
+Ubicated en Documents-BASEINV
 ---
 
 ## 📸 Screenshots
