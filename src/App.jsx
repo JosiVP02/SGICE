@@ -1,7 +1,8 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import "./styles/app.css";
 import logo from "./assets/logo.png";
-import { initDB, hacerBackup, importarBackup } from "./services/db";
+import { initDB, hacerBackup, importarBackup, limpiarMovimientosHasta } from "./services/db";
+
 // Al inicio de App.jsx, agregá confirm de Tauri:
 import { confirm } from "@tauri-apps/plugin-dialog";
 
@@ -58,7 +59,7 @@ const pages = {
   activos: <Activos role={role} />
 };
 
-// dentro del componente:
+
 const [haciendoBackup, setHaciendoBackup] = useState(false);
 
 const backup = async () => {
@@ -68,16 +69,107 @@ const backup = async () => {
 };
 
 
+
+
+
+
+const [showSuccess, setShowSuccess] = useState(false);
+
+const limpiarBD = async () => {
+
+  if (!fechaLimite) {
+
+    setShowLimpiar(false);
+
+    setConfirmData({
+      titulo: "⚠ Fecha requerida",
+      mensaje: "Debe seleccionar una fecha para continuar.",
+      soloAceptar: true,
+      onConfirm: () => {
+        setConfirmData(null);
+        setShowLimpiar(true);
+      }
+    });
+
+    return;
+  }
+
+  // cerrar modal fecha
+  setShowLimpiar(false);
+
+  const ok = await mostrarConfirm(
+    `¿Seguro que desea eliminar todos los movimientos hasta ${fechaLimite}?`
+  );
+
+  // si cancela volver a abrir selector
+  if (!ok) {
+    setShowLimpiar(true);
+    return;
+  }
+
+  try {
+
+    setLimpiando(true);
+
+    const exito = await limpiarMovimientosHasta(fechaLimite);
+
+    if (exito) {
+
+      setFechaLimite("");
+
+      setShowSuccess(true);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
+    }
+
+  } catch (err) {
+
+    console.error(err);
+
+    setConfirmData({
+      titulo: "❌ Error",
+      mensaje: "Ocurrió un error al limpiar movimientos.",
+      soloAceptar: true,
+      onConfirm: () => setConfirmData(null)
+    });
+
+  } finally {
+
+    setLimpiando(false);
+  }
+};
+
+
+
+
+const [showMantenimiento, setShowMantenimiento] = useState(false);
+
+
+
 const [confirmData, setConfirmData] = useState(null);
 
 const mostrarConfirm = (mensaje) =>
   new Promise((resolve) => {
     setConfirmData({
+      titulo: "⚠ Confirmar acción",
       mensaje,
-      onConfirm: () => { resolve(true);  setConfirmData(null); },
-      onCancel:  () => { resolve(false); setConfirmData(null); },
+      onConfirm: () => {
+        resolve(true);
+        setConfirmData(null);
+      },
+      onCancel: () => {
+        resolve(false);
+        setConfirmData(null);
+      },
     });
   });
+
+  const [showLimpiar, setShowLimpiar] = useState(false);
+const [fechaLimite, setFechaLimite] = useState("");
+const [limpiando, setLimpiando] = useState(false);
+
 
 const importar = async () => {
   const ok = await mostrarConfirm("¿Seguro? Esto reemplazará todos los datos actuales con los del backup.");
@@ -164,12 +256,8 @@ const renderPage = () => pages[page] || null;
 
 
 
-            <button onClick={backup} disabled={haciendoBackup}>
-                {haciendoBackup ? "⏳ Guardando..." : "💾 Exportar BD"}
-              </button>
-
-              <button onClick={importar}>
-                📂 Importar BD
+            <button onClick={() => setShowMantenimiento(true)}>
+                ⚙ Mantenimiento
               </button>
 
 
@@ -200,23 +288,213 @@ const renderPage = () => pages[page] || null;
       </div>
 
 
-      {confirmData && (
-        <div className="confirm-overlay">
-          <div className="confirm-box">
-            <h3>⚠️ Importar base de datos</h3>
-            <p>{confirmData.mensaje}</p>
-            <div className="confirm-actions">
-              <button className="btn-cancel" onClick={confirmData.onCancel}>
-                Cancelar
-              </button>
-              <button className="btn-confirm" onClick={confirmData.onConfirm}>
-                Sí, importar
-              </button>
-            </div>
+{confirmData && (
+  <div className="confirm-overlay">
+
+    <div className="confirm-box">
+
+      <div className="success-icon">
+        ⚠
+      </div>
+
+      <h3>{confirmData.titulo}</h3>
+
+      <p>{confirmData.mensaje}</p>
+
+      <div className="confirm-actions">
+
+        {!confirmData.soloAceptar && (
+          <button
+            className="btn-cancel"
+            onClick={confirmData.onCancel}
+          >
+            Cancelar
+          </button>
+        )}
+
+        <button
+          className="btn-confirm"
+          onClick={confirmData.onConfirm}
+        >
+          {confirmData.soloAceptar ? "Aceptar" : "Sí, continuar"}
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+)}
+
+
+
+      {showLimpiar && (
+  <div className="confirm-overlay">
+    <div className="confirm-box">
+
+      <h3>🗑 Limpiar movimientos</h3>
+
+      <p>
+        Seleccione hasta qué fecha desea eliminar movimientos.
+      </p>
+
+      <input
+        type="date"
+        value={fechaLimite}
+        onChange={(e) => setFechaLimite(e.target.value)}
+        style={{
+          width: "100%",
+          padding: "10px",
+          marginTop: "10px",
+          marginBottom: "15px"
+        }}
+      />
+
+      <div className="confirm-actions">
+
+            <button
+              className="btn-cancel"
+              onClick={() => {
+                setShowLimpiar(false);
+                setFechaLimite("");
+              }}
+            >
+              Cancelar
+            </button>
+
+            <button
+              className="btn-confirm"
+              onClick={limpiarBD}
+              disabled={limpiando}
+            >
+              {limpiando ? "Limpiando..." : "Sí, limpiar"}
+            </button>
+
           </div>
         </div>
-      )}
-            
+      </div>
+    )}
+
+
+    {showSuccess && (
+  <div className="confirm-overlay">
+
+    <div className="confirm-box success-box">
+
+      <div className="success-icon">
+        ✓
+      </div>
+
+      <h3>Movimientos eliminados</h3>
+
+      <p>
+        Los movimientos fueron eliminados correctamente.
+      </p>
+
+      <small>
+        La aplicación se reiniciará automáticamente...
+      </small>
+
+    </div>
+
+  </div>
+)}
+
+
+
+
+
+
+
+
+
+
+
+{showMantenimiento && (
+  <div className="confirm-overlay">
+
+    <div className="confirm-box">
+
+      <h3>⚙ Mantenimiento del sistema</h3>
+
+      <p>
+        Seleccione una opción administrativa.
+      </p>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          marginTop: "20px"
+        }}
+      >
+
+        <button
+          className="btn-confirm"
+          onClick={async () => {
+
+            setShowMantenimiento(false);
+
+            setTimeout(async () => {
+              await backup();
+            }, 150);
+
+          }}
+          disabled={haciendoBackup}
+        >
+          {haciendoBackup
+            ? "⏳ Exportando..."
+            : "💾 Exportar base de datos"}
+        </button>
+
+        <button
+          className="btn-confirm"
+          onClick={async () => {
+
+            // cerrar mantenimiento
+            setShowMantenimiento(false);
+
+            // pequeña pausa para evitar overlap visual
+            setTimeout(async () => {
+              await importar();
+            }, 150);
+
+          }}
+        >
+          📂 Importar base de datos
+        </button>
+        
+
+        {role === "admin" && (
+        <button
+          className="btn-confirm"
+          onClick={() => {
+            setShowMantenimiento(false);
+            setShowLimpiar(true);
+          }}
+        >
+          🗑 Limpiar movimientos
+        </button>
+        )}
+
+
+        
+
+        <button
+          className="btn-cancel"
+          onClick={() => setShowMantenimiento(false)}
+        >
+          Cerrar
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+)}
+                
     </div>
   );
 }

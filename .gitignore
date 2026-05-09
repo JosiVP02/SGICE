@@ -22,7 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-src/assets/Logo.png
-
-# App icons
-src-tauri/icons/
+src/assets/logo.png
+src/assets/icons/

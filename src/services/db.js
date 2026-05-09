@@ -194,16 +194,18 @@ export async function initDB() {
 
 
 export async function hacerBackup() {
+ 
   try {
-    // 1. Forzar que SQLite escriba todo al disco
+
     await db.execute("PRAGMA wal_checkpoint(TRUNCATE)");
 
     const documents = await documentDir();
     const origen = await join(documents, "BASEINV", "sgice.db");
+    const hoy = new Date().toISOString().slice(0, 10);
 
     const destino = await save({
       filters: [{ name: "Base de datos", extensions: ["db"] }],
-      defaultPath: `sgice.db`,
+      defaultPath: `sgice_${hoy}.db`,
     });
 
     if (!destino) return false;
@@ -779,4 +781,33 @@ export async function obtenerBitacoraActivos() {
     `SELECT * FROM bitacora_activos
      ORDER BY id DESC`
   );
+}
+
+
+
+
+
+
+
+export async function limpiarMovimientosHasta(fechaLimite) {
+
+  try {
+
+    if (!db) return false;
+
+    await db.execute(
+      `DELETE FROM movimientos
+       WHERE fecha <= ?`,
+      [fechaLimite + " 23:59:59"]
+    );
+
+    await db.execute(`VACUUM`);
+
+    return true;
+
+  } catch (err) {
+
+    console.error(err);
+    return false;
+  }
 }
