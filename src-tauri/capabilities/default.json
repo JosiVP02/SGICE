@@ -8,15 +8,20 @@
     "sql:default",
     "sql:allow-load",
     "sql:allow-execute",
-    "sql:allow-select", 
+    "sql:allow-select",
     "dialog:allow-save",
     "dialog:allow-open",
-     "fs:allow-write-file",
-    "fs:allow-read-file",
     "dialog:default",
-
+    "fs:allow-write-file",
+    "fs:allow-read-file",
     "fs:allow-desktop-write",
     "fs:allow-document-write",
-    "fs:allow-download-write"
+    "fs:allow-document-read",
+    "fs:allow-document-read-recursive",
+    "fs:allow-download-write",
+    "fs:allow-copy-file",
+    "fs:read-all",
+    "fs:write-all",
+    "fs:scope-document-recursive"
   ]
 }

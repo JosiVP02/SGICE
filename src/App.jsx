@@ -1,7 +1,11 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import "./styles/app.css";
-import { initDB } from "./services/db";
 import logo from "./assets/logo.png";
+import { initDB, hacerBackup, importarBackup } from "./services/db";
+// Al inicio de App.jsx, agregá confirm de Tauri:
+import { confirm } from "@tauri-apps/plugin-dialog";
+
+
 
 const Alimentos = lazy(() => import("./pages/Alimentos"));
 const Limpieza = lazy(() => import("./pages/Limpieza"));
@@ -53,6 +57,39 @@ const pages = {
   limpieza: <Limpieza role={role} />,
   activos: <Activos role={role} />
 };
+
+// dentro del componente:
+const [haciendoBackup, setHaciendoBackup] = useState(false);
+
+const backup = async () => {
+  setHaciendoBackup(true);
+  const ok = await hacerBackup();
+  setHaciendoBackup(false);
+};
+
+
+const [confirmData, setConfirmData] = useState(null);
+
+const mostrarConfirm = (mensaje) =>
+  new Promise((resolve) => {
+    setConfirmData({
+      mensaje,
+      onConfirm: () => { resolve(true);  setConfirmData(null); },
+      onCancel:  () => { resolve(false); setConfirmData(null); },
+    });
+  });
+
+const importar = async () => {
+  const ok = await mostrarConfirm("¿Seguro? Esto reemplazará todos los datos actuales con los del backup.");
+  if (!ok) return;
+
+  const exito = await importarBackup();
+  if (!exito) return;
+
+  await initDB();
+  window.location.reload();
+};
+
 
 const renderPage = () => pages[page] || null;
 
@@ -124,6 +161,19 @@ const renderPage = () => pages[page] || null;
         </div>
 
         <div className="sidebar-footer">
+
+
+
+            <button onClick={backup} disabled={haciendoBackup}>
+                {haciendoBackup ? "⏳ Guardando..." : "💾 Exportar BD"}
+              </button>
+
+              <button onClick={importar}>
+                📂 Importar BD
+              </button>
+
+
+
           <div className="sidebar-user">
             <div className="sidebar-avatar">{roleInitial}</div>
             <div className="sidebar-user-info">
@@ -148,7 +198,25 @@ const renderPage = () => pages[page] || null;
           {renderPage()}
         </Suspense>
       </div>
-      
+
+
+      {confirmData && (
+        <div className="confirm-overlay">
+          <div className="confirm-box">
+            <h3>⚠️ Importar base de datos</h3>
+            <p>{confirmData.mensaje}</p>
+            <div className="confirm-actions">
+              <button className="btn-cancel" onClick={confirmData.onCancel}>
+                Cancelar
+              </button>
+              <button className="btn-confirm" onClick={confirmData.onConfirm}>
+                Sí, importar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+            
     </div>
   );
 }

@@ -1,6 +1,11 @@
 import Database from "@tauri-apps/plugin-sql";
 import { documentDir, join } from "@tauri-apps/api/path";
 import { mkdir } from "@tauri-apps/plugin-fs";
+import { copyFile } from "@tauri-apps/plugin-fs";
+import { save } from "@tauri-apps/plugin-dialog";
+
+import { open } from "@tauri-apps/plugin-dialog";
+
 
 let db;
 
@@ -183,6 +188,73 @@ export async function initDB() {
 // =========================
 // CRUD PRODUCTOS
 // =========================
+
+
+
+
+
+export async function hacerBackup() {
+  try {
+    // 1. Forzar que SQLite escriba todo al disco
+    await db.execute("PRAGMA wal_checkpoint(TRUNCATE)");
+
+    const documents = await documentDir();
+    const origen = await join(documents, "BASEINV", "sgice.db");
+
+    const destino = await save({
+      filters: [{ name: "Base de datos", extensions: ["db"] }],
+      defaultPath: `sgice.db`,
+    });
+
+    if (!destino) return false;
+
+    await copyFile(origen, destino);
+    return true;
+
+  } catch (err) {
+    console.error("Error en backup:", err);
+    return false;
+  }
+}
+
+
+
+export async function importarBackup() {
+  try {
+    // 1. Usuario elige el archivo .db a importar
+    const origen = await open({
+      filters: [{ name: "Base de datos", extensions: ["db"] }],
+      multiple: false,
+    });
+
+    if (!origen) return false; // canceló
+
+    // 2. Ruta destino (la DB activa)
+    const documents = await documentDir();
+    const destino = await join(documents, "BASEINV", "sgice.db");
+
+    // 3. Sobrescribir la DB actual con la del backup
+    await copyFile(origen, destino);
+
+    return true;
+
+  } catch (err) {
+    console.error("Error en importar:", err);
+    return false;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 export async function agregarProducto(tabla, nombre, cantidad) {
   await db.execute(
