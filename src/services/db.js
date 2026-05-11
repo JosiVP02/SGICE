@@ -520,6 +520,72 @@ export async function obtenerMovimientos(modulo, filtros = {}) {
 
 
 
+
+
+
+
+export async function obtenerMovimientosRecientes() {
+
+  const hace3Dias = new Date();
+
+  hace3Dias.setDate(
+    hace3Dias.getDate() - 3
+  );
+
+  const fecha = hace3Dias
+    .toISOString()
+    .slice(0, 19)
+    .replace("T", " ");
+
+  return await db.select(
+    `
+    SELECT *
+    FROM movimientos
+    WHERE fecha >= ?
+    ORDER BY fecha DESC
+    LIMIT 50
+    `,
+    [fecha]
+  );
+}
+
+
+
+
+export async function obtenerTopConsumidos(
+  modulo,
+  { desde, hasta }
+) {
+
+  return await db.select(`
+    SELECT
+      producto,
+      SUM(ABS(cantidad)) AS consumo
+    FROM movimientos
+    WHERE tipo = 'Salida'
+      AND LOWER(modulo) = LOWER(?)
+      AND DATE(fecha)
+          BETWEEN DATE(?) AND DATE(?)
+    GROUP BY producto
+    ORDER BY consumo DESC
+    LIMIT 5
+  `, [
+    modulo,
+    desde,
+    hasta
+  ]);
+}
+
+
+
+
+
+
+
+
+
+
+
 export async function ajusteStock(tabla, id, nuevaCantidad, detalle, usuario) {
 
   const producto = await db.select(
@@ -810,4 +876,57 @@ export async function limpiarMovimientosHasta(fechaLimite) {
     console.error(err);
     return false;
   }
+}
+
+
+
+export async function obtenerSinStock() {
+  return await db.select(`
+    SELECT
+      id,
+      nombre,
+      cantidad,
+      'Alimentos' as modulo
+    FROM alimentos
+    WHERE cantidad <= 0
+
+    UNION ALL
+
+    SELECT
+      id,
+      nombre,
+      cantidad,
+      'Limpieza' as modulo
+    FROM limpieza
+    WHERE cantidad <= 0
+
+    ORDER BY nombre
+  `);
+}
+
+
+export async function obtenerStockBajo() {
+  return await db.select(`
+    SELECT
+      id,
+      nombre,
+      cantidad,
+      'Alimentos' as modulo
+    FROM alimentos
+    WHERE cantidad > 0
+    AND cantidad < 5
+
+    UNION ALL
+
+    SELECT
+      id,
+      nombre,
+      cantidad,
+      'Limpieza' as modulo
+    FROM limpieza
+    WHERE cantidad > 0
+    AND cantidad < 5
+
+    ORDER BY cantidad ASC
+  `);
 }

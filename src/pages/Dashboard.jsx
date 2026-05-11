@@ -9,8 +9,13 @@ import React, {
 import {
   obtenerProductos,
   obtenerActivos,
-  obtenerMovimientos
+  obtenerMovimientos,
+  obtenerMovimientosRecientes,
+    obtenerTopConsumidos,
+      obtenerSinStock,
+  obtenerStockBajo
 } from "../services/db";
+
 
 import {
   ResponsiveContainer,
@@ -158,10 +163,23 @@ export default function Dashboard() {
   const [movimientos, setMovimientos] = useState([]);
   const [modulo,      setModulo]      = useState("alimentos");
   const [producto,    setProducto]    = useState("");
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin,    setFechaFin]    = useState("");
+
+  const [recientes, setRecientes] = useState([]);
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  
+
+  const [topConsumidos, setTopConsumidos] = useState([]);
 
 
+  const [sinStock, setSinStock] = useState([]);
+const [stockBajo, setStockBajo] = useState([]);
+
+const [fechaInicio, setFechaInicio] =
+  useState(obtenerHace15Dias());
+
+const [fechaFin, setFechaFin] =
+  useState(hoy);
 
 
 const [debouncedProducto] = useDebounce(producto, 300);
@@ -181,92 +199,131 @@ const [debouncedFin] = useDebounce(
 
 
 
+
+
 useEffect(() => {
-  setFechaInicio("");
-  setFechaFin("");
-}, []);
+  cargar();
+}, [
+  debouncedInicio,
+  debouncedFin,
+  modulo
+]);
 
 
-
-
-  useEffect(() => { cargar(); }, []);
   useEffect(() => { setProducto(""); }, [modulo]);
 
 
 
 
 
-  async function cargar() {
-    const [a,l,ac,mA,mL] = await Promise.all([
-      obtenerProductos("alimentos"), obtenerProductos("limpieza"),
-      obtenerActivos(),
-      obtenerMovimientos("alimentos"), obtenerMovimientos("limpieza"),
-    ]);
-    setAlimentos(a||[]); setLimpieza(l||[]); setActivos(ac||[]);
-    const movs = [...(mA || []), ...(mL || [])].map(m => ({
+async function cargar() {
+
+  const [
+  a,
+  l,
+  ac,
+  mA,
+  mL,
+  recientesDB,
+  topDB,
+  sinStockDB,
+  stockBajoDB
+] = await Promise.all([
+
+    obtenerProductos("alimentos"),
+    obtenerProductos("limpieza"),
+
+    obtenerActivos(),
+
+    obtenerMovimientos("alimentos", {
+      desde: debouncedInicio,
+      hasta: debouncedFin
+    }),
+
+    obtenerMovimientos("limpieza", {
+      desde: debouncedInicio,
+      hasta: debouncedFin
+    }),
+
+    obtenerMovimientosRecientes(),
+
+    obtenerTopConsumidos(modulo, {
+      desde: debouncedInicio,
+      hasta: debouncedFin
+    }),
+    
+    obtenerSinStock(),
+    obtenerStockBajo()
+
+  ]);
+
+  setSinStock(sinStockDB || []);
+setStockBajo(stockBajoDB || []);
+
+  setTopConsumidos(
+  (topDB || []).map(item => {
+
+    const nombre =
+      item.producto ||
+      item.nombre ||
+      "Sin nombre";
+
+    const consumo =
+      Number(
+        item.consumo ??
+        item.total_consumido ??
+        item.total ??
+        0
+      );
+
+    return {
+      name:
+        nombre.length > 16
+          ? nombre.slice(0, 16) + "…"
+          : nombre,
+
+      consumo
+    };
+  })
+);
+
+  setAlimentos(a || []);
+  setLimpieza(l || []);
+  setActivos(ac || []);
+
+  const movs = [...(mA || []), ...(mL || [])].map(m => ({
     ...m,
 
-      // Fecha completa ya parseada
+    fechaObj: new Date(
+      (m.fecha || "").replace(" ", "T")
+    ),
+
+    fechaDia: (m.fecha || "").slice(0, 10),
+  }));
+
+  setMovimientos(movs);
+
+  setRecientes(
+    (recientesDB || []).map(m => ({
+      ...m,
       fechaObj: new Date(
         (m.fecha || "").replace(" ", "T")
-      ),
+      )
+    }))
+  );
 
-      // Solo YYYY-MM-DD
-      fechaDia: (m.fecha || "").slice(0, 10),
-    }));
-
-    setMovimientos(movs);
-  }
+}
 
 
 
 
 
-  const productosLista = modulo==="alimentos" ? alimentos : limpieza;
+const productosLista = modulo==="alimentos" ? alimentos : limpieza;
 
   // ── KPIs ──
-const sinStockAlim = useMemo(
-  () => alimentos.filter(p => Number(p.cantidad) <= 0),
-  [alimentos]
-);
 
 
-
-
-const sinStockLimp = useMemo(
-  () => limpieza.filter(p => Number(p.cantidad) <= 0),
-  [limpieza]
-);
-
-
-
-
-const totalSinStock = useMemo(
-  () => sinStockAlim.length + sinStockLimp.length,
-  [sinStockAlim, sinStockLimp]
-);
-
-
-
-
-const bajosA = useMemo(
-  () => alimentos.filter(
-    p => Number(p.cantidad) > 0 && Number(p.cantidad) < 5
-  ),
-  [alimentos]
-);
-
-
-
-
-const bajosL = useMemo(
-  () => limpieza.filter(
-    p => Number(p.cantidad) > 0 && Number(p.cantidad) < 5
-  ),
-  [limpieza]
-);
-
-
+const totalSinStock = sinStock.length;
 
 
 const activosOk = useMemo(
@@ -294,26 +351,15 @@ const activosBaja = useMemo(
 
   
 
-const hoyStr = useMemo(() => {
-  const hoy = new Date();
-
-  return (
-    hoy.getFullYear() +
-    "-" +
-    String(hoy.getMonth() + 1).padStart(2, "0") +
-    "-" +
-    String(hoy.getDate()).padStart(2, "0")
-  );
-}, []);
 
 
 
 const movsHoy = useMemo(
   () =>
     movimientos.filter(
-      m => m.fechaDia === hoyStr
+      m => m.fechaDia === hoy
     ),
-  [movimientos, hoyStr]
+  [movimientos, hoy]
 );
 
 
@@ -327,67 +373,16 @@ const movsHoy = useMemo(
 
 
 
+function obtenerHace15Dias() {
+  const d = new Date();
+
+  d.setDate(d.getDate() - 15);
+
+  return d.toISOString().slice(0, 10);
+}
 
 
 
-
-
-
-
-
-
-
-
-
-  // ── Movimientos recientes ──
-const recientes = useMemo(() => {
-  return [...movimientos]
-    .sort((a, b) => b.fechaObj - a.fechaObj)
-    .slice(0, 10);
-}, [movimientos]);
-
-
-
-
-
-  // ── Top 5 consumidos ──
-const topConsumidos = useMemo(() => {
-
-const ini = debouncedInicio
-  ? new Date(debouncedInicio + "T00:00:00")
-  : new Date("2000-01-01");
-
-const fin = debouncedFin
-  ? new Date(debouncedFin + "T23:59:59")
-  : new Date();
-
-  const map = {};
-
-  movimientos
-    .filter(m =>
-      m.tipo === "Salida" &&
-      m.fechaObj >= ini &&
-      m.fechaObj <= fin
-    )
-    .forEach(m => {
-      map[m.producto] =
-        (map[m.producto] || 0) + Math.abs(m.cantidad || 0);
-    });
-
-  return Object.entries(map)
-    .map(([name, consumo]) => ({
-      name: name.length > 16
-        ? name.slice(0,16) + "…"
-        : name,
-      consumo
-    }))
-    .sort((a,b) => b.consumo - a.consumo)
-    .slice(0,5);
-
-}, [movimientos, debouncedInicio, debouncedFin]);
-
-
-  
 
 
 
@@ -500,6 +495,21 @@ const opcionesProductos = useMemo(() => [
 ], [productosLista]);
 
 
+
+
+const sinStockAlimentos = useMemo(
+  () => sinStock.filter(p => p.modulo === "Alimentos"),
+  [sinStock]
+);
+
+const sinStockLimpieza = useMemo(
+  () => sinStock.filter(p => p.modulo === "Limpieza"),
+  [sinStock]
+);
+
+
+
+
   
 
   // ── Input style reutilizable ──
@@ -539,12 +549,38 @@ const opcionesProductos = useMemo(() => [
 
       {/* ── KPIs ── */}
       <div className="kpi-grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(175px,1fr))",marginBottom:20}}>
-        <KpiCard icon="🥦" title="Alimentos"     value={alimentos.length}
-          sub={sinStockAlim.length>0?`${sinStockAlim.length} sin stock`:"Todo con stock"}
-          subColor={sinStockAlim.length>0?"#f87171":"#4ade80"} accent="#6366f1"/>
-        <KpiCard icon="🧹" title="Limpieza"       value={limpieza.length}
-          sub={sinStockLimp.length>0?`${sinStockLimp.length} sin stock`:"Todo con stock"}
-          subColor={sinStockLimp.length>0?"#f87171":"#4ade80"} accent="#06b6d4"/>
+        <KpiCard
+            icon="🥦"
+            title="Alimentos"
+            value={alimentos.length}
+            sub={
+              sinStock.filter(p => p.modulo === "Alimentos").length > 0
+                ? `${sinStock.filter(p => p.modulo === "Alimentos").length} sin stock`
+                : "Todo con stock"
+            }
+            subColor={
+              sinStock.filter(p => p.modulo === "Alimentos").length > 0
+                ? "#f87171"
+                : "#4ade80"
+            }
+            accent="#6366f1"
+          />
+        <KpiCard
+            icon="🧹"
+            title="Limpieza"
+            value={limpieza.length}
+            sub={
+              sinStock.filter(p => p.modulo === "Limpieza").length > 0
+                ? `${sinStock.filter(p => p.modulo === "Limpieza").length} sin stock`
+                : "Todo con stock"
+            }
+            subColor={
+              sinStock.filter(p => p.modulo === "Limpieza").length > 0
+                ? "#f87171"
+                : "#4ade80"
+            }
+            accent="#06b6d4"
+          />
         <KpiCard icon="📦" title="Activos"         value={activos.length}
           sub={`${activosOk} activos · ${activosDañado} dañados`}
           subColor={activosDañado>0?"#fbbf24":"#4ade80"} accent="#a855f7"/>
@@ -560,38 +596,142 @@ const opcionesProductos = useMemo(() => [
       <div className="grid-2" style={{marginBottom:18}}>
 
         <ChartCard title="Productos sin stock" icon="⚠️">
-          {totalSinStock===0 ? (
-            <div style={{textAlign:"center",padding:"28px 0"}}>
-              <div style={{fontSize:32,marginBottom:8}}>✅</div>
-              <div style={{color:"#4ade80",fontSize:13,fontWeight:600}}>Todos con stock</div>
+  {totalSinStock === 0 ? (
+    <div style={{ textAlign:"center", padding:"28px 0" }}>
+      <div style={{ fontSize:32, marginBottom:8 }}>✅</div>
+
+      <div
+        style={{
+          color:"#4ade80",
+          fontSize:13,
+          fontWeight:600
+        }}
+      >
+        Todos con stock
+      </div>
+    </div>
+  ) : (
+    <div
+      style={{
+        maxHeight:280,
+        overflowY:"auto",
+        display:"flex",
+        flexDirection:"column",
+        gap:6
+      }}
+    >
+
+      {/* ALIMENTOS */}
+      {sinStockAlimentos.length > 0 && (
+        <>
+          <div
+            style={{
+              fontSize:11,
+              fontWeight:700,
+              color:"#64748b",
+              textTransform:"uppercase",
+              letterSpacing:".5px",
+              padding:"4px 0 2px"
+            }}
+          >
+            🥦 Alimentos
+          </div>
+
+          {sinStockAlimentos.map((p) => (
+            <div
+              key={`alim-${p.id}`}
+              style={{
+                display:"flex",
+                justifyContent:"space-between",
+                alignItems:"center",
+                padding:"8px 12px",
+                borderRadius:8,
+                background:"rgba(240,68,56,0.07)",
+                border:"1px solid rgba(240,68,56,0.18)"
+              }}
+            >
+              <span
+                style={{
+                  color:"#e2e8f0",
+                  fontSize:13,
+                  fontWeight:500
+                }}
+              >
+                {p.nombre}
+              </span>
+
+              <span
+                style={{
+                  color:"#f87171",
+                  fontSize:12,
+                  fontWeight:700,
+                  fontFamily:"'DM Mono', monospace"
+                }}
+              >
+                {p.cantidad} uds
+              </span>
             </div>
-          ) : (
-            <div style={{maxHeight:280,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
-              {sinStockAlim.length>0 && <>
-                <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".5px",padding:"4px 0 2px"}}>🥦 Alimentos</div>
-                {sinStockAlim.map(p=>(
-                  <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                    padding:"8px 12px",borderRadius:8,
-                    background:"rgba(240,68,56,0.07)",border:"1px solid rgba(240,68,56,0.18)"}}>
-                    <span style={{color:"#e2e8f0",fontSize:13,fontWeight:500}}>{p.nombre}</span>
-                    <span style={{color:"#f87171",fontSize:12,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{p.cantidad} uds</span>
-                  </div>
-                ))}
-              </>}
-              {sinStockLimp.length>0 && <>
-                <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:".5px",padding:"8px 0 2px"}}>🧹 Limpieza</div>
-                {sinStockLimp.map(p=>(
-                  <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                    padding:"8px 12px",borderRadius:8,
-                    background:"rgba(247,144,9,0.07)",border:"1px solid rgba(247,144,9,0.18)"}}>
-                    <span style={{color:"#e2e8f0",fontSize:13,fontWeight:500}}>{p.nombre}</span>
-                    <span style={{color:"#fbbf24",fontSize:12,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{p.cantidad} uds</span>
-                  </div>
-                ))}
-              </>}
+          ))}
+        </>
+      )}
+
+      {/* LIMPIEZA */}
+      {sinStockLimpieza.length > 0 && (
+        <>
+          <div
+            style={{
+              fontSize:11,
+              fontWeight:700,
+              color:"#64748b",
+              textTransform:"uppercase",
+              letterSpacing:".5px",
+              padding:"8px 0 2px"
+            }}
+          >
+            🧹 Limpieza
+          </div>
+
+          {sinStockLimpieza.map((p) => (
+            <div
+              key={`limp-${p.id}`}
+              style={{
+                display:"flex",
+                justifyContent:"space-between",
+                alignItems:"center",
+                padding:"8px 12px",
+                borderRadius:8,
+                background:"rgba(247,144,9,0.07)",
+                border:"1px solid rgba(247,144,9,0.18)"
+              }}
+            >
+              <span
+                style={{
+                  color:"#e2e8f0",
+                  fontSize:13,
+                  fontWeight:500
+                }}
+              >
+                {p.nombre}
+              </span>
+
+              <span
+                style={{
+                  color:"#fbbf24",
+                  fontSize:12,
+                  fontWeight:700,
+                  fontFamily:"'DM Mono', monospace"
+                }}
+              >
+                {p.cantidad} uds
+              </span>
             </div>
-          )}
-        </ChartCard>
+          ))}
+        </>
+      )}
+
+    </div>
+  )}
+</ChartCard>
 
         <ChartCard title="Movimientos recientes" icon="🕒">
           {recientes.length===0 ? <EmptyMsg msg="No hay movimientos registrados"/> : (
@@ -663,9 +803,15 @@ const opcionesProductos = useMemo(() => [
 
           <button
           onClick={() => {
-            setProducto("");
-            setFechaInicio("");
-            setFechaFin("");
+          setProducto("");
+
+          setFechaInicio(
+            obtenerHace15Dias()
+          );
+
+          setFechaFin(
+            new Date().toISOString().slice(0, 10)
+          );
           }}
           style={{
             padding: "10px 16px",
@@ -758,55 +904,130 @@ const opcionesProductos = useMemo(() => [
         </ChartCard>
 
         <ChartCard title="Stock bajo (menos de 5 unidades)" icon="📉">
-          {(() => {
-            const todos=[
-              ...bajosA.map(p=>({...p,mod:"Alimento"})),
-              ...bajosL.map(p=>({...p,mod:"Limpieza"})),
-            ].sort((a,b)=>a.cantidad-b.cantidad);
-            if (todos.length===0) return (
-              <div style={{textAlign:"center",padding:"32px 0"}}>
-                <div style={{fontSize:28,marginBottom:8}}>✅</div>
-                <div style={{color:"#4ade80",fontSize:13,fontWeight:600}}>Sin productos con stock bajo</div>
-              </div>
-            );
+        {(() => {
+
+          const todos = [...stockBajo].sort(
+            (a, b) => a.cantidad - b.cantidad
+          );
+
+          if (todos.length === 0)
             return (
-              <div style={{maxHeight:300,overflowY:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-                  <thead>
-                    <tr style={{borderBottom:"1px solid rgba(255,255,255,0.07)"}}>
-                      {["Producto","Módulo","Stock"].map(h=>(
-                        <th key={h} style={{padding:"6px 10px",textAlign:"left",
-                          fontSize:11,fontWeight:700,color:"#64748b",
-                          textTransform:"uppercase",letterSpacing:".4px"}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {todos.map((p)=>(
-                      <tr key={p.id} style={{borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
-                        <td style={{padding:"8px 10px",color:"#e2e8f0",fontWeight:500}}>{p.nombre}</td>
-                        <td style={{padding:"8px 10px"}}>
-                          <span style={{
-                            fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,
-                            background:p.mod==="Alimento"?"rgba(99,102,241,0.15)":"rgba(6,182,212,0.15)",
-                            color:p.mod==="Alimento"?"#a5b4fc":"#67e8f9",
-                            fontFamily:"'DM Mono',monospace",
-                          }}>{p.mod}</span>
-                        </td>
-                        <td style={{padding:"8px 10px"}}>
-                          <span style={{
-                            fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:14,
-                            color:p.cantidad<=2?"#f87171":"#fbbf24",
-                          }}>{p.cantidad}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ textAlign:"center", padding:"32px 0" }}>
+                <div style={{ fontSize:28, marginBottom:8 }}>✅</div>
+
+                <div
+                  style={{
+                    color:"#4ade80",
+                    fontSize:13,
+                    fontWeight:600
+                  }}
+                >
+                  Sin productos con stock bajo
+                </div>
               </div>
             );
-          })()}
-        </ChartCard>
+
+          return (
+            <div style={{ maxHeight:300, overflowY:"auto" }}>
+              <table
+                style={{
+                  width:"100%",
+                  borderCollapse:"collapse",
+                  fontSize:13
+                }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      borderBottom:"1px solid rgba(255,255,255,0.07)"
+                    }}
+                  >
+                    {["Producto", "Módulo", "Stock"].map(h => (
+                      <th
+                        key={h}
+                        style={{
+                          padding:"6px 10px",
+                          textAlign:"left",
+                          fontSize:11,
+                          fontWeight:700,
+                          color:"#64748b",
+                          textTransform:"uppercase",
+                          letterSpacing:".4px"
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {todos.map((p) => (
+                    <tr
+                      key={`${p.modulo}-${p.id}`}
+                      style={{
+                        borderBottom:"1px solid rgba(255,255,255,0.04)"
+                      }}
+                    >
+                      <td
+                        style={{
+                          padding:"8px 10px",
+                          color:"#e2e8f0",
+                          fontWeight:500
+                        }}
+                      >
+                        {p.nombre}
+                      </td>
+
+                      <td style={{ padding:"8px 10px" }}>
+                        <span
+                          style={{
+                            fontSize:11,
+                            fontWeight:700,
+                            padding:"2px 8px",
+                            borderRadius:20,
+
+                            background:
+                              p.modulo === "Alimentos"
+                                ? "rgba(99,102,241,0.15)"
+                                : "rgba(6,182,212,0.15)",
+
+                            color:
+                              p.modulo === "Alimentos"
+                                ? "#a5b4fc"
+                                : "#67e8f9",
+
+                            fontFamily:"'DM Mono', monospace"
+                          }}
+                        >
+                          {p.modulo}
+                        </span>
+                      </td>
+
+                      <td style={{ padding:"8px 10px" }}>
+                        <span
+                          style={{
+                            fontFamily:"'DM Mono', monospace",
+                            fontWeight:700,
+                            fontSize:14,
+
+                            color:
+                              p.cantidad <= 2
+                                ? "#f87171"
+                                : "#fbbf24"
+                          }}
+                        >
+                          {p.cantidad}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+      </ChartCard>
       </div>
 
     </div>

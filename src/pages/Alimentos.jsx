@@ -223,6 +223,9 @@ const confirm = (mensaje) =>
 
   const cargar = async () => setProductos(await obtenerProductos("alimentos"));
 
+
+
+
 const cargarHistorial = async (desde = "", hasta = "") => {
   try {
     setHistorial(await obtenerMovimientos("alimentos", { desde, hasta }));
@@ -232,8 +235,30 @@ const cargarHistorial = async (desde = "", hasta = "") => {
 };
 
 
-  useEffect(() => { cargar(); cargarHistorial(); }, []);
+useEffect(() => {
+  cargar();
 
+  // 🔥 Fecha actual
+  const hoy = new Date();
+
+  // 🔥 Hace 15 días
+  const hace15 = new Date();
+  hace15.setDate(hace15.getDate() - 15);
+
+  // formato YYYY-MM-DD
+  const format = (f) => f.toISOString().slice(0, 10);
+
+  const desde = format(hace15);
+  const hasta = format(hoy);
+
+  // guardar en inputs
+  setFechaInicio(desde);
+  setFechaFin(hasta);
+
+  // cargar historial filtrado
+  cargarHistorial(desde, hasta);
+
+}, []);
 
 
   const filtrados = useMemo(() =>
@@ -620,10 +645,26 @@ const historialFiltrado = useMemo(() => {
               <button
                 className="btn-clear"
                 onClick={() => {
-                  setFechaInicio("");
-                  setFechaFin("");
+                  const hoy = new Date();
+
+                  // 🔥 hace 15 días
+                  const hace15 = new Date();
+                  hace15.setDate(hace15.getDate() - 15);
+
+                  // formato YYYY-MM-DD
+                  const format = (f) => f.toISOString().slice(0, 10);
+
+                  const desde = format(hace15);
+                  const hasta = format(hoy);
+
+                  // actualizar estados
+                  setFechaInicio(desde);
+                  setFechaFin(hasta);
+
                   setOrdenFecha("desc");
-                  cargarHistorial(); 
+
+                  // recargar historial
+                  cargarHistorial(desde, hasta);
                 }}
               >
                 Limpiar
