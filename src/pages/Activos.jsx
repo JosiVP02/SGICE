@@ -347,19 +347,47 @@ const cambiarEstado = async (a, estado) => {
 
 
 
-  const exportPDF = () => {
+const exportPDF = () => {
     const doc=new jsPDF("landscape");
     doc.setFontSize(14); doc.text("REPORTE DE ACTIVOS",14,15);
     doc.setFontSize(10); doc.text(`Fecha: ${new Date().toLocaleString("es-CR")}`,14,22);
     doc.text(`Categoría: ${filtroCategoria||"Todas"} | Placa: ${filtroPlaca} | Estado: ${filtroEstado||"Todos"}`,14,28);
     doc.text(`Total: ${filtrados.length}`,14,34);
-    autoTable(doc,{startY:40,theme:"grid",headStyles:{fillColor:[30,49,74]},head:[["Artículo","Categoría","Marca","Modelo","Serie","Placa","Factura","Fecha","Ubicación","Observaciones","Costo","Vida util","Dep. Mensual","Dep. Acum","Valor en libros","Estado"]],body:filtrados.map(a=>[a.articulo,a.categoria,a.marca||"-",a.modelo||"-",a.serie||"-",a.tiene_placa?a.placa:"SIN",a.factura||"-",a.fecha_adquisicion,a.ubicacion||"-",a.observaciones||"-",a.costo_original,a.vida_util_anios,a.depreciacion_mensual,depreciacionAcumulada(a),valorLibros(a),a.estado]),styles:{fontSize:8,cellPadding:2}});
+    autoTable(doc,{startY:40,theme:"grid",headStyles:{fillColor:[30,49,74]},
+      head:[["Artículo","Categoría","Marca","Modelo","Serie","Placa","Factura","Fecha","Ubicación","Observaciones","Costo","Vida util","Dep. Mensual","Dep. Acum","Valor en libros","Estado"]],
+      body:filtrados.map(a=>[a.articulo,a.categoria,a.marca||"-",a.modelo||"-",a.serie||"-",a.tiene_placa?a.placa:"SIN",a.factura||"-",a.fecha_adquisicion,a.ubicacion||"-",a.observaciones||"-",a.costo_original,a.vida_util_anios,a.depreciacion_mensual,depreciacionAcumulada(a),valorLibros(a),a.estado]),
+      styles:{fontSize:7,cellPadding:1.5,overflow:"linebreak"},
+      columnStyles:{
+        0:{cellWidth:22},  // Artículo
+        1:{cellWidth:12},  // Categoría
+        2:{cellWidth:18},  // Marca
+        3:{cellWidth:18},  // Modelo
+        4:{cellWidth:20},  // Serie
+        5:{cellWidth:10},  // Placa
+        6:{cellWidth:12},  // Factura
+        7:{cellWidth:18},  // Fecha
+        8:{cellWidth:20},  // Ubicación
+        9:{cellWidth:25},  // Observaciones
+        10:{cellWidth:18}, // Costo
+        11:{cellWidth:10}, // Vida util
+        12:{cellWidth:18}, // Dep. Mensual
+        13:{cellWidth:18}, // Dep. Acum
+        14:{cellWidth:18}, // Valor en libros
+        15:{cellWidth:12}, // Estado
+      }
+    });
     doc.save("reporte_activos.pdf");
   };
 
 
 
 
+
+
+
+
+
+  
 
   const exportExcel = () => {
     const data=filtrados.map(a=>({Articulo:a.articulo,Categoria:a.categoria,Marca:a.marca||"-",Modelo:a.modelo||"-",Serie:a.serie||"-",Placa:a.tiene_placa?a.placa:"SIN",Factura:a.factura||"-",Fecha:a.fecha_adquisicion,Ubicacion:a.ubicacion||"-",Observaciones:a.observaciones||"-",Costo:a.costo_original,"Vida util":a.vida_util_anios,"Dep Mensual":a.depreciacion_mensual,"Dep Acumulada":depreciacionAcumulada(a),"Valor Libros":valorLibros(a),Estado:a.estado}));
@@ -447,7 +475,8 @@ const eliminarConfirmado = async (id) => {
 
 
   return (
-    <div className="module-wrap">
+    <div className="module-wrap" style={{maxWidth:"100%", paddingRight:24}}>
+
       {msg && <div className={`toast ${msgType}`}>{msg}</div>}
 
       <div className="module-top">
@@ -488,33 +517,49 @@ const eliminarConfirmado = async (id) => {
           </div>
 
           <div className="table-card" style={{overflowX:"auto"}}>
-            <table className="tabla">
-              <thead>
-                <tr>
-                  <th>Artículo</th><th>Categoría</th><th>Marca</th><th>Modelo</th>
-                  <th>Serie</th><th>Placa</th><th>Factura</th><th>Fecha</th>
-                  <th>Ubicación</th><th>Costo</th><th>Dep. Acum.</th><th>Valor Libros</th><th>Estado</th>
+          <table className="tabla" style={{width:"100%", tableLayout:"fixed", minWidth:1600}}>
+
+            <thead>
+              <tr>
+                <th style={{width:"13%"}}>Artículo</th>
+                <th style={{width:"5%"}}>Categoría</th>
+                <th style={{width:"7%"}}>Marca</th>
+                <th style={{width:"7%"}}>Modelo</th>
+                <th style={{width:"8%"}}>Serie</th>
+                <th style={{width:"5%"}}>Placa</th>
+                <th style={{width:"5%"}}>Factura</th>
+                <th style={{width:"6%"}}>Fecha</th>
+                <th style={{width:"8%"}}>Ubicación</th>
+                <th style={{width:"10%"}}>Observaciones</th>
+                <th style={{width:"7%"}}>Costo</th>
+                <th style={{width:"7%"}}>Dep. Acum.</th>
+                <th style={{width:"7%"}}>Valor Libros</th>
+                <th style={{width:"5%"}}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtrados.map(a => (
+                <tr key={a.id}>
+                  <td style={{wordBreak:"break-word"}}><strong>{a.articulo}</strong></td>
+                  <td><span className="badge" style={{background:"var(--blue-lt)",color:"var(--blue)"}}>{a.categoria}</span></td>
+                  <td style={{wordBreak:"break-word"}}>{a.marca||"—"}</td>
+                  <td style={{wordBreak:"break-word"}}>{a.modelo||"—"}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",fontSize:12,wordBreak:"break-all"}}>{a.serie||"—"}</td>
+                  <td>{a.tiene_placa?<span className="badge placa">{a.placa}</span>:<span className="badge sin">SIN</span>}</td>
+                  <td>{a.factura||"—"}</td>
+                  <td style={{fontSize:12,fontFamily:"'DM Mono',monospace"}}>{a.fecha_adquisicion}</td>
+                  <td style={{wordBreak:"break-word"}}>{a.ubicacion||"—"}</td>
+                  <td style={{color:"var(--text2)",fontSize:12,wordBreak:"break-word"}}>{a.observaciones||"—"}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace"}}>{a.costo_original}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",color:"var(--amber)"}}>{depreciacionAcumulada(a)}</td>
+                  <td style={{fontFamily:"'DM Mono',monospace",color:"var(--green)",fontWeight:600}}>{valorLibros(a)}</td>
+                  <td>{estadoBadge(a.estado)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {filtrados.map(a => (
-                  <tr key={a.id}>
-                    <td><strong>{a.articulo}</strong></td>
-                    <td><span className="badge" style={{background:"var(--blue-lt)",color:"var(--blue)"}}>{a.categoria}</span></td>
-                    <td>{a.marca||"—"}</td><td>{a.modelo||"—"}</td><td style={{fontFamily:"'DM Mono',monospace",fontSize:12}}>{a.serie||"—"}</td>
-                    <td>{a.tiene_placa?<span className="badge placa">{a.placa}</span>:<span className="badge sin">SIN</span>}</td>
-                    <td>{a.factura||"—"}</td><td style={{fontSize:12,fontFamily:"'DM Mono',monospace"}}>{a.fecha_adquisicion}</td>
-                    <td>{a.ubicacion||"—"}</td>
-                    <td style={{fontFamily:"'DM Mono',monospace"}}>{a.costo_original}</td>
-                    <td style={{fontFamily:"'DM Mono',monospace",color:"var(--amber)"}}>{depreciacionAcumulada(a)}</td>
-                    <td style={{fontFamily:"'DM Mono',monospace",color:"var(--green)",fontWeight:600}}>{valorLibros(a)}</td>
-                    <td>{estadoBadge(a.estado)}</td>
-                  </tr>
-                ))}
-                {filtrados.length===0 && <tr><td colSpan={13} style={{textAlign:"center",padding:"32px",color:"var(--text3)"}}>Sin resultados</td></tr>}
-              </tbody>
-            </table>
-          </div>
+              ))}
+              {filtrados.length===0 && <tr><td colSpan={14} style={{textAlign:"center",padding:"32px",color:"var(--text3)"}}>Sin resultados</td></tr>}
+            </tbody>
+          </table>
+        </div>
         </>
       )}
 
